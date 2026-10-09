@@ -90,7 +90,7 @@ class _LoginPageState extends State<LoginPage> {
 
               // Role dropdown
               DropdownButtonFormField<String>(
-                value: _selectedRole,
+                 initialValue: _selectedRole,
                 decoration: const InputDecoration(
                   labelText: 'Masuk Sebagai',
                   border: OutlineInputBorder(),
@@ -99,7 +99,6 @@ class _LoginPageState extends State<LoginPage> {
                 items: const [
                   DropdownMenuItem(value: 'Admin', child: Text('Admin / Pemilik')),
                   DropdownMenuItem(value: 'Staff', child: Text('Staff / Karyawan')),
-                  DropdownMenuItem(value: 'Customer', child: Text('Customer / Pelanggan')),
                 ],
                 onChanged: (val) => setState(() => _selectedRole = val!),
               ),

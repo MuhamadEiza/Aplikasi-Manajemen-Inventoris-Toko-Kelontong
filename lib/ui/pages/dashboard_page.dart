@@ -8,6 +8,8 @@ import '../../providers/product_provider.dart';
 import '../../providers/stock_provider.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/bottom_nav.dart';
+import 'product/product_list_page.dart';
+import 'vendor/vendor_list_page.dart';
 
 /// Dashboard — halaman utama setelah login
 class DashboardPage extends StatefulWidget {
@@ -26,17 +28,15 @@ class _DashboardPageState extends State<DashboardPage> {
 
     // Kalau belum login, redirect ke Login (safety)
     if (!auth.isLoggedIn) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     // Tampilkan halaman sesuai index bottom nav
     return Scaffold(
       body: _buildBody(_currentIndex, auth.role ?? 'Admin'),
       bottomNavigationBar: BottomNav(
-        currentIndex: _currentIndex > (_maxIndex(auth.role ?? 'Admin')) 
-            ? 0 
+        currentIndex: _currentIndex > (_maxIndex(auth.role ?? 'Admin'))
+            ? 0
             : _currentIndex,
         role: auth.role ?? 'Admin',
         onTap: (i) => setState(() => _currentIndex = i),
@@ -51,7 +51,7 @@ class _DashboardPageState extends State<DashboardPage> {
       case 0:
         return _buildHomeTab();
       case 1:
-        return _buildPlaceholder('Produk', Icons.inventory_2);
+        return const ProductListPage();
       case 2:
         return _buildPlaceholder('Transaksi', Icons.swap_horiz);
       case 3:
@@ -204,7 +204,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       onTap: () => _showComingSoon('Barang Masuk'),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: _quickAction(
                       icon: Icons.remove_circle,
@@ -213,13 +213,33 @@ class _DashboardPageState extends State<DashboardPage> {
                       onTap: () => _showComingSoon('Barang Keluar'),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: _quickAction(
                       icon: Icons.fact_check,
                       label: 'Opname',
                       color: AppColors.accent,
                       onTap: () => _showComingSoon('Opname'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _quickAction(
+                      icon: Icons.local_shipping,
+                      label: 'Kelola\nVendor',
+                      color: AppColors.primary,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const VendorListPage(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -275,7 +295,9 @@ class _DashboardPageState extends State<DashboardPage> {
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.1,
+                        ),
                         child: Text(
                           p.name[0],
                           style: const TextStyle(
@@ -367,8 +389,8 @@ class _DashboardPageState extends State<DashboardPage> {
             color: rank == 1
                 ? AppColors.accent
                 : rank == 2
-                    ? AppColors.textSecondary
-                    : AppColors.low,
+                ? AppColors.textSecondary
+                : AppColors.low,
             borderRadius: BorderRadius.circular(6),
           ),
           child: Center(
@@ -390,10 +412,7 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         Text(
           qty,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
         ),
       ],
     );

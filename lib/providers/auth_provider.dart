@@ -15,7 +15,6 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoggedIn => _role != null;
   bool get isAdmin => _role == 'Admin';
   bool get isStaff => _role == 'Staff';
-  bool get isCustomer => _role == 'Customer';
 
   /// Login — simpan role & nama user
   void login({

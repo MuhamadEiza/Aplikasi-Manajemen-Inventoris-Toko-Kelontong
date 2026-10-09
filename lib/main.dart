@@ -6,7 +6,7 @@ import 'core/constants/app_colors.dart';
 // Dummy Repositories
 import 'data/dummy/dummy_product_repository.dart';
 import 'data/dummy/dummy_vendor_repository.dart';
-import 'data/dummy/dummy_customer_repository.dart';
+
 import 'data/dummy/dummy_stock_repository.dart';
 import 'data/dummy/dummy_opname_repository.dart';
 
@@ -14,7 +14,7 @@ import 'data/dummy/dummy_opname_repository.dart';
 import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/vendor_provider.dart';
-import 'providers/customer_provider.dart';
+
 import 'providers/stock_provider.dart';
 import 'providers/opname_provider.dart';
 
@@ -46,9 +46,7 @@ class WarungStockApp extends StatelessWidget {
         ),
 
         // Customer — inject DummyCustomerRepository
-        ChangeNotifierProvider(
-          create: (_) => CustomerProvider(DummyCustomerRepository())..loadAll(),
-        ),
+       
 
         // Stock — inject DummyStockRepository
         ChangeNotifierProvider(
