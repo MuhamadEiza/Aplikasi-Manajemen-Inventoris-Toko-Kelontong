@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'profile_page.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../providers/auth_provider.dart';
@@ -8,8 +9,13 @@ import '../../providers/product_provider.dart';
 import '../../providers/stock_provider.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/bottom_nav.dart';
-import 'product/product_list_page.dart';
 import 'vendor/vendor_list_page.dart';
+import 'opname/opname_list_page.dart';
+import 'transaction/stock_in_list_page.dart';
+import 'transaction/stock_out_list_page.dart';
+
+
+
 
 /// Dashboard — halaman utama setelah login
 class DashboardPage extends StatefulWidget {
@@ -47,24 +53,25 @@ class _DashboardPageState extends State<DashboardPage> {
   int _maxIndex(String role) => role == 'Admin' ? 4 : 3;
 
   Widget _buildBody(int index, String role) {
-    switch (index) {
-      case 0:
-        return _buildHomeTab();
-      case 1:
-        return const ProductListPage();
-      case 2:
-        return _buildPlaceholder('Transaksi', Icons.swap_horiz);
-      case 3:
-        if (role == 'Admin') {
-          return _buildPlaceholder('Opname', Icons.fact_check);
-        }
-        return _buildPlaceholder('Profil', Icons.person);
-      case 4:
-        return _buildPlaceholder('Profil', Icons.person);
-      default:
-        return _buildHomeTab();
-    }
+  switch (index) {
+    case 0:
+      return _buildHomeTab();
+    case 1:
+      // Menu "Masuk"
+      return const StockInListPage();
+    case 2:
+      return const StockOutListPage();
+    case 3:
+      if (role == 'Admin') {
+        return const OpnameListPage();
+      }
+      return const ProfilePage();
+    case 4:
+      return const ProfilePage();
+    default:
+      return _buildHomeTab();
   }
+}
 
   // ==================== TAB HOME ====================
   Widget _buildHomeTab() {
@@ -418,30 +425,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildPlaceholder(String title, IconData icon) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 64, color: AppColors.textSecondary),
-          const SizedBox(height: 16),
-          Text(
-            'Halaman $title',
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Akan dibuat di step berikutnya',
-            style: TextStyle(color: AppColors.textSecondary),
-          ),
-        ],
-      ),
-    );
-  }
+  
 
   void _showComingSoon(String feature) {
     ScaffoldMessenger.of(context).showSnackBar(

@@ -8,7 +8,7 @@ import '../../widgets/product_card.dart';
 import 'product_detail_page.dart';
 import 'product_form_page.dart';
 
-/// Halaman Daftar Produk
+/// Halaman Daftar Produk — dengan search by nama/barcode
 class ProductListPage extends StatefulWidget {
   const ProductListPage({super.key});
 
@@ -19,6 +19,7 @@ class ProductListPage extends StatefulWidget {
 class _ProductListPageState extends State<ProductListPage> {
   final _searchController = TextEditingController();
   String _selectedCategory = 'Semua';
+  bool _isBarcodeMode = false; // deteksi apakah query numeric
 
   final List<String> _categories = [
     'Semua',
@@ -36,19 +37,28 @@ class _ProductListPageState extends State<ProductListPage> {
     super.dispose();
   }
 
+  /// Cek apakah query terlihat seperti barcode (hanya angka, minimal 8 digit)
+  bool _looksLikeBarcode(String query) {
+    if (query.length < 8) return false;
+    return RegExp(r'^\d+$').hasMatch(query);
+  }
+
   @override
   Widget build(BuildContext context) {
     final productProvider = context.watch<ProductProvider>();
     final auth = context.watch<AuthProvider>();
 
-    // Filter produk
+    // Filter kategori dulu
     var filtered = productProvider.filterByCategory(_selectedCategory);
-    if (_searchController.text.isNotEmpty) {
-      filtered = filtered
-          .where((p) => p.name
-              .toLowerCase()
-              .contains(_searchController.text.toLowerCase()))
-          .toList();
+
+    // Filter search (nama ATAU barcode)
+    final query = _searchController.text.trim();
+    if (query.isNotEmpty) {
+      filtered = filtered.where((p) {
+        final nameMatch = p.name.toLowerCase().contains(query.toLowerCase());
+        final barcodeMatch = p.barcode?.contains(query) ?? false;
+        return nameMatch || barcodeMatch;
+      }).toList();
     }
 
     return Scaffold(
@@ -60,18 +70,39 @@ class _ProductListPageState extends State<ProductListPage> {
       ),
       body: Column(
         children: [
-          // Search & Filter
+          // ============ SEARCH & FILTER ============
           Container(
             color: Colors.white,
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
+                // Search bar
                 TextField(
                   controller: _searchController,
-                  onChanged: (_) => setState(() {}),
+                  onChanged: (value) {
+                    setState(() {
+                      _isBarcodeMode = _looksLikeBarcode(value);
+                    });
+                  },
                   decoration: InputDecoration(
-                    hintText: 'Cari nama barang...',
-                    prefixIcon: const Icon(Icons.search),
+                    hintText: 'Cari nama atau barcode...',
+                    prefixIcon: Icon(
+                      _isBarcodeMode ? Icons.qr_code : Icons.search,
+                      color: _isBarcodeMode
+                          ? AppColors.primary
+                          : AppColors.textSecondary,
+                    ),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 20),
+                            onPressed: () {
+                              setState(() {
+                                _searchController.clear();
+                                _isBarcodeMode = false;
+                              });
+                            },
+                          )
+                        : null,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -82,42 +113,102 @@ class _ProductListPageState extends State<ProductListPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                // Filter kategori
-                SizedBox(
-                  height: 36,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _categories.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (context, i) {
-                      final cat = _categories[i];
-                      final isActive = cat == _selectedCategory;
-                      return ChoiceChip(
-                        label: Text(
-                          cat,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isActive ? Colors.white : AppColors.textPrimary,
-                            fontWeight:
-                                isActive ? FontWeight.bold : FontWeight.normal,
+
+                // Info banner kalau mode barcode
+                if (_isBarcodeMode) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.qr_code,
+                          size: 14,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Mencari dengan kode barcode...',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                        selected: isActive,
-                        onSelected: (_) =>
-                            setState(() => _selectedCategory = cat),
-                        selectedColor: AppColors.primary,
-                        backgroundColor: AppColors.background,
-                        showCheckmark: false,
-                      );
-                    },
+                      ],
+                    ),
                   ),
-                ),
+                ],
+
+                const SizedBox(height: 10),
+
+                // Filter kategori (hanya tampil kalau bukan mode barcode)
+                if (!_isBarcodeMode)
+                  SizedBox(
+                    height: 36,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _categories.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(width: 8),
+                      itemBuilder: (context, i) {
+                        final cat = _categories[i];
+                        final isActive = cat == _selectedCategory;
+                        return ChoiceChip(
+                          label: Text(
+                            cat,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isActive
+                                  ? Colors.white
+                                  : AppColors.textPrimary,
+                              fontWeight: isActive
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                          selected: isActive,
+                          onSelected: (_) =>
+                              setState(() => _selectedCategory = cat),
+                          selectedColor: AppColors.primary,
+                          backgroundColor: AppColors.background,
+                          showCheckmark: false,
+                        );
+                      },
+                    ),
+                  ),
               ],
             ),
           ),
 
-          // List produk
+          // ============ INFO HASIL ============
+          if (_searchController.text.isNotEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              color: AppColors.background,
+              child: Text(
+                '${filtered.length} produk ditemukan',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+
+          // ============ LIST PRODUK ============
           Expanded(
             child: productProvider.isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -148,6 +239,7 @@ class _ProductListPageState extends State<ProductListPage> {
           ),
         ],
       ),
+
       // FAB hanya untuk Admin
       floatingActionButton: auth.isAdmin
           ? FloatingActionButton.extended(
@@ -168,37 +260,49 @@ class _ProductListPageState extends State<ProductListPage> {
   }
 
   Widget _emptyState() {
+    final isSearching = _searchController.text.isNotEmpty;
+
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isSearching
+                    ? (_isBarcodeMode ? Icons.qr_code_2 : Icons.search_off)
+                    : Icons.inventory_2_outlined,
+                size: 48,
+                color: AppColors.primary,
+              ),
             ),
-            child: const Icon(
-              Icons.inventory_2_outlined,
-              size: 48,
-              color: AppColors.primary,
+            const SizedBox(height: 16),
+            Text(
+              isSearching ? 'Produk tidak ditemukan' : 'Tidak ada produk',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Tidak ada produk',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+            const SizedBox(height: 8),
+            Text(
+              isSearching
+                  ? (_isBarcodeMode
+                      ? 'Barcode "${_searchController.text}" tidak terdaftar'
+                      : 'Coba kata kunci lain atau ubah filter kategori')
+                  : 'Coba ubah filter atau tambah produk baru',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textSecondary),
             ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Coba ubah filter atau tambah produk baru',
-            style: TextStyle(color: AppColors.textSecondary),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

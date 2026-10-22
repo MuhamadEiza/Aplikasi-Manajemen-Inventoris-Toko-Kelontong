@@ -9,6 +9,8 @@ import '../../../providers/product_provider.dart';
 import '../../widgets/status_badge.dart';
 import 'product_form_page.dart';
 
+import 'package:barcode_widget/barcode_widget.dart';
+
 /// Halaman Detail Produk
 class ProductDetailPage extends StatelessWidget {
   final Product product;
@@ -64,8 +66,7 @@ class ProductDetailPage extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 30,
-                    backgroundColor:
-                        AppColors.primary.withValues(alpha: 0.1),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                     child: Text(
                       product.name[0],
                       style: const TextStyle(
@@ -110,17 +111,26 @@ class ProductDetailPage extends StatelessWidget {
             _sectionTitle('Informasi Harga'),
             const SizedBox(height: 8),
             _infoCard([
-              _infoRow('Harga Beli',
-                  CurrencyFormatter.formatRupiah(product.purchasePrice)),
-              _infoRow('Harga Jual',
-                  CurrencyFormatter.formatRupiah(product.sellingPrice),
-                  valueColor: AppColors.primary, isBold: true),
-              _infoRow('Margin (Rp)',
-                  CurrencyFormatter.formatRupiah(product.marginRupiah),
-                  valueColor: AppColors.safe),
-              _infoRow('Margin (%)',
-                  CurrencyFormatter.formatPersen(product.marginPercent),
-                  valueColor: AppColors.safe),
+              _infoRow(
+                'Harga Beli',
+                CurrencyFormatter.formatRupiah(product.purchasePrice),
+              ),
+              _infoRow(
+                'Harga Jual',
+                CurrencyFormatter.formatRupiah(product.sellingPrice),
+                valueColor: AppColors.primary,
+                isBold: true,
+              ),
+              _infoRow(
+                'Margin (Rp)',
+                CurrencyFormatter.formatRupiah(product.marginRupiah),
+                valueColor: AppColors.safe,
+              ),
+              _infoRow(
+                'Margin (%)',
+                CurrencyFormatter.formatPersen(product.marginPercent),
+                valueColor: AppColors.safe,
+              ),
             ]),
             const SizedBox(height: 16),
 
@@ -128,11 +138,23 @@ class ProductDetailPage extends StatelessWidget {
             _sectionTitle('Informasi Stok'),
             const SizedBox(height: 8),
             _infoCard([
-              _infoRow('Stok Saat Ini', '${product.currentStock} ${product.unit}',
-                  isBold: true),
-              _infoRow('Stok Minimum', '${product.minimumStock} ${product.unit}'),
+              _infoRow(
+                'Stok Saat Ini',
+                '${product.currentStock} ${product.unit}',
+                isBold: true,
+              ),
+              _infoRow(
+                'Stok Minimum',
+                '${product.minimumStock} ${product.unit}',
+              ),
               _infoRow('Satuan', product.unit),
             ]),
+            const SizedBox(height: 16),
+
+            // ============ BARCODE (BARU) ============
+            _sectionTitle('Barcode Produk'),
+            const SizedBox(height: 8),
+            _barcodeCard(),
             const SizedBox(height: 16),
 
             // ============ TOMBOL AKSI ============
@@ -181,18 +203,24 @@ class ProductDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _infoRow(String label, String value,
-      {Color? valueColor, bool isBold = false}) {
+  Widget _infoRow(
+    String label,
+    String value, {
+    Color? valueColor,
+    bool isBold = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label,
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-              )),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+            ),
+          ),
           Text(
             value,
             style: TextStyle(
@@ -200,6 +228,79 @@ class ProductDetailPage extends StatelessWidget {
               fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
               color: valueColor ?? AppColors.textPrimary,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _barcodeCard() {
+    if (!product.hasBarcode) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.divider.withValues(alpha: 0.3)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.qr_code_2, color: AppColors.textSecondary, size: 24),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Produk ini belum memiliki barcode',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.divider.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          BarcodeWidget(
+            barcode: Barcode.code128(),
+            data: product.barcode!,
+            width: double.infinity,
+            height: 80,
+            drawText: true,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.qr_code,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                product.barcode!,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -219,14 +320,11 @@ class ProductDetailPage extends StatelessWidget {
           ),
           TextButton(
             onPressed: () async {
-              await context
-                  .read<ProductProvider>()
-                  .deleteProduct(product.id);
+              await context.read<ProductProvider>().deleteProduct(product.id);
               if (ctx.mounted) Navigator.pop(ctx);
               if (context.mounted) Navigator.pop(context);
             },
-            child: const Text('Hapus',
-                style: TextStyle(color: AppColors.out)),
+            child: const Text('Hapus', style: TextStyle(color: AppColors.out)),
           ),
         ],
       ),

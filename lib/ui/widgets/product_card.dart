@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:barcode_widget/barcode_widget.dart';
+
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../data/models/product.dart';
@@ -34,7 +36,7 @@ class ProductCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Baris 1: Nama + Badge
+              // ============ BARIS 1: NAMA + BADGE ============
               Row(
                 children: [
                   Expanded(
@@ -58,11 +60,92 @@ class ProductCard extends StatelessWidget {
                   color: AppColors.textSecondary,
                 ),
               ),
+
+              // ============ BARCODE (BARU) ============
+              if (product.hasBarcode) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppColors.divider.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.qr_code,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: BarcodeWidget(
+                          barcode: Barcode.code128(),
+                          data: product.barcode!,
+                          height: 24,
+                          drawText: false,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        product.barcode!,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textSecondary,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppColors.divider.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.qr_code_2,
+                        size: 16,
+                        color: AppColors.textSecondary,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'Belum ada barcode',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
               const SizedBox(height: 10),
               const Divider(height: 1),
               const SizedBox(height: 10),
 
-              // Baris 2: Harga Beli
+              // ============ BARIS 2: HARGA BELI ============
               Row(
                 children: [
                   const SizedBox(
@@ -86,7 +169,7 @@ class ProductCard extends StatelessWidget {
               ),
               const SizedBox(height: 6),
 
-              // Baris 3: Harga Jual + Margin
+              // ============ BARIS 3: HARGA JUAL + MARGIN ============
               Row(
                 children: [
                   const SizedBox(
@@ -130,7 +213,7 @@ class ProductCard extends StatelessWidget {
               ),
               const SizedBox(height: 6),
 
-              // Baris 4: Stok
+              // ============ BARIS 4: STOK ============
               Row(
                 children: [
                   const SizedBox(

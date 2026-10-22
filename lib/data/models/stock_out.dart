@@ -18,8 +18,11 @@ class StockOut {
 
   double get total => items.fold(0, (sum, item) => sum + item.subtotal);
   double get totalProfit => items.fold(0, (sum, item) => sum + item.profit);
+  int get totalQuantity => items.fold(0, (sum, item) => sum + item.quantity);
+  int get totalProducts => items.length;
 }
 
+/// Detail item StockOut
 class StockOutItem {
   final String productId;
   final String productName;

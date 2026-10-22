@@ -20,8 +20,15 @@ import 'providers/opname_provider.dart';
 
 // Pages
 import 'ui/pages/splash_page.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
-void main() {
+void main() async {
+  // Wajib: init binding untuk async di main
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Init locale Indonesia untuk format tanggal & Rupiah
+  await initializeDateFormatting('id_ID', null);
+
   runApp(const WarungStockApp());
 }
 

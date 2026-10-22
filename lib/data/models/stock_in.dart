@@ -18,8 +18,10 @@ class StockIn {
 
   double get total => items.fold(0, (sum, item) => sum + item.subtotal);
   int get totalQuantity => items.fold(0, (sum, item) => sum + item.quantity);
+  int get totalProducts => items.length;
 }
 
+/// Detail item StockIn
 class StockInItem {
   final String productId;
   final String productName;

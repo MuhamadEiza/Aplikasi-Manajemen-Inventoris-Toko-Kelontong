@@ -10,17 +10,25 @@ class StockOpname {
     required this.items,
   });
 
+  /// Total selisih nilai (Rp)
+  /// Contoh: -2 pcs × Rp 2.500 = -Rp 5.000
   double get totalDifferenceValue =>
       items.fold(0, (sum, item) => sum + item.differenceValue);
+
+  /// Total selisih unit
+  /// Contoh: -2 pcs + 0 + -1 = -3 unit
+  int get totalDifferenceUnit =>
+      items.fold(0, (sum, item) => sum + item.difference);
 }
 
+/// Detail item StockOpname
 class StockOpnameItem {
   final String productId;
   final String productName;
-  final int systemStock;
-  final int physicalStock;
-  final String? note;
-  final double purchasePrice;
+  final int systemStock;      // stok sistem (auto)
+  final int physicalStock;    // stok fisik (input)
+  final String? note;         // keterangan
+  final double purchasePrice; // untuk hitung selisih nilai
 
   StockOpnameItem({
     required this.productId,
@@ -31,6 +39,11 @@ class StockOpnameItem {
     required this.purchasePrice,
   });
 
+  /// Selisih: fisik - sistem
+  /// Contoh: 108 - 110 = -2
   int get difference => physicalStock - systemStock;
+
+  /// Selisih nilai (Rp)
+  /// Contoh: -2 × Rp 2.500 = -Rp 5.000
   double get differenceValue => difference * purchasePrice;
 }

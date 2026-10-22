@@ -24,12 +24,13 @@ class BottomNav extends StatelessWidget {
       ),
       const BottomNavigationBarItem(
         icon: Icon(Icons.inventory_2),
-        label: 'Produk',
+        label: 'Masuk',
       ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.swap_horiz),
-        label: 'Transaksi',
+     const BottomNavigationBarItem(
+        icon: Icon(Icons.inventory_2),
+        label: 'Keluar',
       ),
+     
       // Opname hanya untuk Admin
       if (role == 'Admin')
         const BottomNavigationBarItem(

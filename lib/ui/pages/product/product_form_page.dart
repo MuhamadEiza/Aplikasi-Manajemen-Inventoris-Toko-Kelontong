@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:barcode_widget/barcode_widget.dart';
 
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/utils/currency_formatter.dart';
-import '../../../../data/models/product.dart';
-import '../../../../providers/product_provider.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/currency_formatter.dart';
+import '../../../data/models/product.dart';
+import '../../../providers/product_provider.dart';
 
-/// Form Tambah/Edit Produk (1 halaman, tanpa multi-step)
+/// Form Tambah/Edit Produk
 class ProductFormPage extends StatefulWidget {
   final Product? product;
 
@@ -20,6 +21,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _brandController = TextEditingController();
+  final _barcodeController = TextEditingController();
   final _purchasePriceController = TextEditingController();
   final _sellingPriceController = TextEditingController();
   final _stockController = TextEditingController();
@@ -53,6 +55,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
       _nameController.text = p.name;
       _selectedCategory = p.category;
       _selectedUnit = p.unit;
+      _barcodeController.text = p.barcode ?? '';
       _purchasePriceController.text = p.purchasePrice.toStringAsFixed(0);
       _sellingPriceController.text = p.sellingPrice.toStringAsFixed(0);
       _stockController.text = p.currentStock.toString();
@@ -64,6 +67,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
   void dispose() {
     _nameController.dispose();
     _brandController.dispose();
+    _barcodeController.dispose();
     _purchasePriceController.dispose();
     _sellingPriceController.dispose();
     _stockController.dispose();
@@ -84,6 +88,65 @@ class _ProductFormPageState extends State<ProductFormPage> {
     return jual - beli;
   }
 
+  /// Generate barcode dummy berdasarkan timestamp
+  void _generateBarcode() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+    // Ambil 13 digit terakhir
+    final barcode = timestamp.substring(timestamp.length - 13);
+    setState(() {
+      _barcodeController.text = barcode;
+    });
+  }
+
+  /// Placeholder scan barcode (aktif di UAS)
+  void _scanBarcode() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.qr_code_scanner, color: AppColors.primary),
+            SizedBox(width: 8),
+            Text('Scan Barcode'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Fitur scan kamera akan aktif setelah UAS.',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Untuk saat ini, silakan:',
+              style: TextStyle(fontSize: 12),
+            ),
+            SizedBox(height: 4),
+            Text(
+              '• Ketik barcode manual di field',
+              style: TextStyle(fontSize: 12),
+            ),
+            Text(
+              '• Atau klik "Generate" untuk barcode otomatis',
+              style: TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -96,6 +159,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
       name: _nameController.text.trim(),
       category: _selectedCategory,
       unit: _selectedUnit,
+      barcode: _barcodeController.text.trim().isEmpty
+          ? null
+          : _barcodeController.text.trim(),
       purchasePrice: double.parse(_purchasePriceController.text),
       sellingPrice: double.parse(_sellingPriceController.text),
       currentStock: int.parse(_stockController.text),
@@ -112,7 +178,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            _isEdit ? 'Produk berhasil diubah' : 'Produk berhasil ditambahkan',
+            _isEdit
+                ? 'Produk berhasil diubah'
+                : 'Produk berhasil ditambahkan',
           ),
           backgroundColor: AppColors.safe,
         ),
@@ -191,6 +259,94 @@ class _ProductFormPageState extends State<ProductFormPage> {
               ),
               const SizedBox(height: 20),
 
+              // ============ BARCODE SECTION (BARU) ============
+              _sectionTitle('Barcode Produk'),
+              const SizedBox(height: 4),
+              const Text(
+                'Kode barcode untuk scan cepat',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              TextFormField(
+                controller: _barcodeController,
+                keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText: 'Kode Barcode (opsional)',
+                  hintText: 'Contoh: 8992388101010',
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.qr_code),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.qr_code_scanner),
+                    tooltip: 'Scan (UAS)',
+                    onPressed: _scanBarcode,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Tombol Generate
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _generateBarcode,
+                      icon: const Icon(Icons.autorenew, size: 18),
+                      label: const Text(
+                        'Generate Otomatis',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.primary),
+                        foregroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              // Preview barcode
+              if (_barcodeController.text.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppColors.divider.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Preview Barcode',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      BarcodeWidget(
+                        barcode: Barcode.code128(),
+                        data: _barcodeController.text,
+                        width: double.infinity,
+                        height: 70,
+                        drawText: true,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 20),
+
               // ============ HARGA ============
               _sectionTitle('Harga'),
               const SizedBox(height: 10),
@@ -220,7 +376,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 ),
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Harga jual wajib diisi';
-                  final beli = double.tryParse(_purchasePriceController.text) ?? 0;
+                  final beli =
+                      double.tryParse(_purchasePriceController.text) ?? 0;
                   final jual = double.tryParse(v) ?? 0;
                   if (jual < beli) return 'Harga jual < harga beli';
                   return null;
@@ -228,7 +385,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
               ),
               const SizedBox(height: 12),
 
-              // Margin preview (read-only)
+              // Margin preview
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(

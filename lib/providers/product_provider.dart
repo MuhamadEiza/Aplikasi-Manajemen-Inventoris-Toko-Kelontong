@@ -76,4 +76,24 @@ class ProductProvider extends ChangeNotifier {
         .where((p) => p.name.toLowerCase().contains(query.toLowerCase()))
         .toList();
   }
+   /// Cari produk berdasarkan barcode
+  Product? getByBarcode(String barcode) {
+    if (barcode.isEmpty) return null;
+    try {
+      return _products.firstWhere((p) => p.barcode == barcode);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Search by nama ATAU barcode
+  List<Product> searchByBarcodeOrName(String query) {
+    if (query.isEmpty) return _products;
+    final q = query.toLowerCase();
+    return _products.where((p) {
+      final nameMatch = p.name.toLowerCase().contains(q);
+      final barcodeMatch = p.barcode?.contains(query) ?? false;
+      return nameMatch || barcodeMatch;
+    }).toList();
+  }
 }
