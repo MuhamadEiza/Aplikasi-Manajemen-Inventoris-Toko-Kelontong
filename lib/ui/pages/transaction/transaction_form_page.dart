@@ -45,18 +45,17 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
   }
 
   double get _total => _items.fold(
-        0,
-        (sum, item) =>
-            sum + ((item['qty'] as int) * (item['price'] as double)),
-      );
+    0,
+    (sum, item) => sum + ((item['qty'] as int) * (item['price'] as double)),
+  );
 
   double get _profit => _items.fold(
-        0,
-        (sum, item) =>
-            sum +
-            (((item['price'] as double) - (item['purchasePrice'] as double)) *
-                (item['qty'] as int)),
-      );
+    0,
+    (sum, item) =>
+        sum +
+        (((item['price'] as double) - (item['purchasePrice'] as double)) *
+            (item['qty'] as int)),
+  );
 
   /// Cari produk by barcode → auto-fill dropdown produk
   void _searchByBarcode() {
@@ -166,8 +165,9 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
       return;
     }
 
-    final price =
-        widget.isStockIn ? product.purchasePrice : product.sellingPrice;
+    final price = widget.isStockIn
+        ? product.purchasePrice
+        : product.sellingPrice;
 
     setState(() {
       _items.add({
@@ -301,7 +301,19 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
               ),
               const SizedBox(height: 20),
             ],
-
+            // if (widget.isStockIn) ...[
+            //   _sectionTitle('Vendor / Agen *'),
+            //   const SizedBox(height: 8),
+            //   TextFormField(
+            //     controller: _vendorNameController,
+            //     decoration: const InputDecoration(
+            //       border: OutlineInputBorder(),
+            //       prefixIcon: Icon(Icons.local_shipping),
+            //       hintText: 'Ketik nama vendor / agen',
+            //     ),
+            //   ),
+            //   const SizedBox(height: 20),
+            // ],
             // ============ SCAN BARCODE ============
             _sectionTitle('Scan / Cari Barcode'),
             const SizedBox(height: 4),
@@ -479,9 +491,7 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
             if (_items.isNotEmpty) ...[
               const SizedBox(height: 20),
               _sectionTitle(
-                widget.isStockIn
-                    ? 'Bukti Nota / Faktur'
-                    : 'Bukti Struk / Nota',
+                widget.isStockIn ? 'Bukti Nota / Faktur' : 'Bukti Struk / Nota',
               ),
               const SizedBox(height: 8),
               _proofUploadBox(),

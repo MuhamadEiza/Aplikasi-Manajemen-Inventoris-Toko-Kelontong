@@ -66,6 +66,7 @@ class StockOutListPage extends StatelessWidget {
           );
         },
         backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('Barang Keluar'),
       ),

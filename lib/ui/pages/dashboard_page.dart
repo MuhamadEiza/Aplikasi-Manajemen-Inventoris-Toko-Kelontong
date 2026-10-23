@@ -208,7 +208,14 @@ class _DashboardPageState extends State<DashboardPage> {
                       icon: Icons.add_circle,
                       label: 'Barang\nMasuk',
                       color: AppColors.safe,
-                      onTap: () => _showComingSoon('Barang Masuk'),
+                     onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const StockInListPage(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -217,7 +224,14 @@ class _DashboardPageState extends State<DashboardPage> {
                       icon: Icons.remove_circle,
                       label: 'Barang\nKeluar',
                       color: AppColors.low,
-                      onTap: () => _showComingSoon('Barang Keluar'),
+                       onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const StockOutListPage(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -226,7 +240,14 @@ class _DashboardPageState extends State<DashboardPage> {
                       icon: Icons.fact_check,
                       label: 'Opname',
                       color: AppColors.accent,
-                      onTap: () => _showComingSoon('Opname'),
+                       onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const OpnameListPage(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],

@@ -111,7 +111,14 @@ class _LoginPageState extends State<LoginPage> {
                   backgroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: const Text('MASUK', style: TextStyle(fontSize: 16)),
+                 child: const Text(
+                  'MASUK', 
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold, 
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ],
           ),

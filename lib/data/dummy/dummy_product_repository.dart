@@ -4,6 +4,9 @@ import '../repositories/product_repository.dart';
 /// Data dummy 8 produk realistis
 /// Setiap produk diberi barcode dummy (format EAN-13)
 class DummyProductRepository implements ProductRepository {
+  
+  // List ini mensimulasikan isi tabel 'products' di database.
+  // Digunakan sebagai sumber data sementara (hardcode) selama fase UTS.
   final List<Product> _products = [
     Product(
       id: 'p001',
@@ -105,15 +108,20 @@ class DummyProductRepository implements ProductRepository {
 
   @override
   Future<List<Product>> getAllProducts() async {
+    // Simulasi jeda loading (300ms) agar UI terlihat lebih natural saat memuat data.
     await Future.delayed(const Duration(milliseconds: 300));
+    
+    // Mengembalikan salinan list (copy) agar UI tidak bisa mengubah data secara langsung.
     return List.from(_products);
   }
 
   @override
   Future<Product?> getProductById(String id) async {
     try {
+      // Mencari 1 produk berdasarkan ID-nya.
       return _products.firstWhere((p) => p.id == id);
     } catch (_) {
+      // Jika ID tidak ditemukan, kembalikan null (tidak error/crash).
       return null;
     }
   }
@@ -121,25 +129,31 @@ class DummyProductRepository implements ProductRepository {
   /// Cari produk berdasarkan barcode
   Future<Product?> getProductByBarcode(String barcode) async {
     try {
+      // Fitur tambahan UTS: mencari produk dengan scan/input barcode.
       return _products.firstWhere((p) => p.barcode == barcode);
     } catch (_) {
-      return null;
+      return null; // Barcode tidak terdaftar
     }
   }
 
   @override
   Future<void> addProduct(Product product) async {
+    // Menambahkan produk baru ke dalam list.
     _products.add(product);
   }
 
   @override
   Future<void> updateProduct(Product product) async {
+    // Mencari index produk yang akan diubah berdasarkan ID.
     final i = _products.indexWhere((p) => p.id == product.id);
+    
+    // Jika produk ditemukan (index tidak -1), timpa data lama dengan data baru.
     if (i != -1) _products[i] = product;
   }
 
   @override
   Future<void> deleteProduct(String id) async {
+    // Menghapus produk dari list berdasarkan ID.
     _products.removeWhere((p) => p.id == id);
   }
 }
