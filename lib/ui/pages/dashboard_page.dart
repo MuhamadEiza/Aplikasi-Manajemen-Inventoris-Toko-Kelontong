@@ -14,9 +14,6 @@ import 'opname/opname_list_page.dart';
 import 'transaction/stock_in_list_page.dart';
 import 'transaction/stock_out_list_page.dart';
 
-
-
-
 /// Dashboard — halaman utama setelah login
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -50,28 +47,32 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  int _maxIndex(String role) => role == 'Admin' ? 4 : 3;
+  int _maxIndex(String role) => role == 'Admin' ? 5 : 4;
 
   Widget _buildBody(int index, String role) {
-  switch (index) {
-    case 0:
-      return _buildHomeTab();
-    case 1:
-      // Menu "Masuk"
-      return const StockInListPage();
-    case 2:
-      return const StockOutListPage();
-    case 3:
-      if (role == 'Admin') {
-        return const OpnameListPage();
-      }
-      return const ProfilePage();
-    case 4:
-      return const ProfilePage();
-    default:
-      return _buildHomeTab();
+    switch (index) {
+      case 0:
+        return _buildHomeTab();
+      case 1:
+        return const StockInListPage();
+      case 2:
+        return const StockOutListPage();
+      case 3:
+        if (role == 'Admin') {
+          return const OpnameListPage(); // Hanya Admin
+        }
+        return const ProfilePage(); // Staff: Profil di index 3
+      case 4:
+        if (role == 'Admin') {
+          return const VendorListPage(); // Hanya Admin
+        }
+        return _buildHomeTab(); // Fallback
+      case 5:
+        return const ProfilePage(); // Admin: Profil di index 5
+      default:
+        return _buildHomeTab();
+    }
   }
-}
 
   // ==================== TAB HOME ====================
   Widget _buildHomeTab() {
@@ -192,87 +193,6 @@ class _DashboardPageState extends State<DashboardPage> {
               const SizedBox(height: 20),
 
               // ============ TOMBOL AKSI CEPAT ============
-              const Text(
-                'Aksi Cepat',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _quickAction(
-                      icon: Icons.add_circle,
-                      label: 'Barang\nMasuk',
-                      color: AppColors.safe,
-                     onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const StockInListPage(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _quickAction(
-                      icon: Icons.remove_circle,
-                      label: 'Barang\nKeluar',
-                      color: AppColors.low,
-                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const StockOutListPage(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _quickAction(
-                      icon: Icons.fact_check,
-                      label: 'Opname',
-                      color: AppColors.accent,
-                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const OpnameListPage(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: _quickAction(
-                      icon: Icons.local_shipping,
-                      label: 'Kelola\nVendor',
-                      color: AppColors.primary,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const VendorListPage(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
 
               // ============ TOP 3 TERLARIS ============
               const Text(
@@ -445,8 +365,6 @@ class _DashboardPageState extends State<DashboardPage> {
       ],
     );
   }
-
-  
 
   void _showComingSoon(String feature) {
     ScaffoldMessenger.of(context).showSnackBar(

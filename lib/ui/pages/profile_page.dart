@@ -8,6 +8,7 @@ import '../../providers/stock_provider.dart';
 import '../../providers/vendor_provider.dart';
 import '../widgets/menu_tile.dart';
 import 'login_page.dart';
+import 'register_page.dart'; // <-- Tambahan import yang kamu miliki
 
 /// Halaman Profil — info akun + menu + logout
 class ProfilePage extends StatelessWidget {
@@ -15,6 +16,7 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Mengambil data dari Provider (State Management)
     final auth = context.watch<AuthProvider>();
     final productProvider = context.watch<ProductProvider>();
     final vendorProvider = context.watch<VendorProvider>();
@@ -33,6 +35,7 @@ class ProfilePage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // ============ CARD PROFIL USER ============
+            // Menampilkan inisial nama, nama lengkap, email, dan role (Admin/Staff)
             _profileCard(auth),
 
             const SizedBox(height: 16),
@@ -48,8 +51,8 @@ class ProfilePage extends StatelessWidget {
             _statsCard(
               totalProducts: productProvider.products.length,
               totalVendors: vendorProvider.vendors.length,
-              totalTransactions:
-                  stockProvider.stockInList.length + stockProvider.stockOutList.length,
+              totalTransactions: stockProvider.stockInList.length +
+                  stockProvider.stockOutList.length,
             ),
 
             const SizedBox(height: 16),
@@ -71,7 +74,7 @@ class ProfilePage extends StatelessWidget {
               onTap: () => _showComingSoon(context, 'Informasi Toko'),
             ),
 
-            // Menu khusus Admin
+            // Menu khusus Admin (Hanya muncul jika role == 'Admin')
             if (auth.isAdmin)
               MenuTile(
                 icon: Icons.people_outline,
@@ -114,7 +117,7 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 24),
 
             // ============ FOOTER ============
-            Center(
+            const Center(
               child: Text(
                 'WarungStock v1.0.0 (UTS Build)',
                 style: TextStyle(
@@ -135,7 +138,7 @@ class ProfilePage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [AppColors.primary, AppColors.primaryLight],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -278,15 +281,15 @@ class ProfilePage extends StatelessWidget {
           const SizedBox(height: 12),
           const Divider(height: 1),
           const SizedBox(height: 12),
-          Row(
+          const Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.location_on,
                 size: 14,
                 color: AppColors.textSecondary,
               ),
-              const SizedBox(width: 6),
-              const Expanded(
+              SizedBox(width: 6),
+              Expanded(
                 child: Text(
                   'Jl. Pasar Baru No. 45, Bandung',
                   style: TextStyle(
@@ -454,19 +457,19 @@ class ProfilePage extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
         ),
         title: const Text('Tentang Aplikasi'),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Center(
+            Center(
               child: Icon(
                 Icons.storefront,
                 size: 48,
                 color: AppColors.primary,
               ),
             ),
-            const SizedBox(height: 12),
-            const Center(
+            SizedBox(height: 12),
+            Center(
               child: Text(
                 'WarungStock',
                 style: TextStyle(
@@ -475,8 +478,8 @@ class ProfilePage extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 4),
-            const Center(
+            SizedBox(height: 4),
+            Center(
               child: Text(
                 'v1.0.0 (UTS Build)',
                 style: TextStyle(
@@ -485,13 +488,13 @@ class ProfilePage extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            const Text(
+            SizedBox(height: 16),
+            Text(
               'Aplikasi Manajemen Inventaris Toko Kelontong yang membantu pemilik toko mencatat stok masuk/keluar dari vendor, mengelola harga beli-jual, dan melakukan opname.',
               style: TextStyle(fontSize: 12),
             ),
-            const SizedBox(height: 12),
-            const Text(
+            SizedBox(height: 12),
+            Text(
               'Dibuat untuk tugas kuliah UI — semester ini.',
               style: TextStyle(
                 fontSize: 11,

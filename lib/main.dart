@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/constants/app_colors.dart';
 
 // Dummy Repositories
-import 'data/dummy/dummy_product_repository.dart';
+import 'data/repositories/supabase_product_repository.dart';
 import 'data/dummy/dummy_vendor_repository.dart';
 
-import 'data/dummy/dummy_stock_repository.dart';
+import 'data/repositories/supabase_stock_repository.dart';
 import 'data/dummy/dummy_opname_repository.dart';
 
 // Providers
@@ -20,6 +21,7 @@ import 'providers/opname_provider.dart';
 
 // Pages
 import 'ui/pages/splash_page.dart';
+
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
@@ -28,6 +30,13 @@ void main() async {
 
   // Init locale Indonesia untuk format tanggal & Rupiah
   await initializeDateFormatting('id_ID', null);
+  // ==========================================
+  // INISIALISASI SUPABASE
+  // ==========================================
+  await Supabase.initialize(
+    url: 'https://xddivwsltbpbqwhtpnae.supabase.co',
+    anonKey: 'sb_publishable_SQWQNOA12dMkianoh9EYDg_8WJ_agot',
+  );
 
   runApp(const WarungStockApp());
 }
@@ -42,9 +51,10 @@ class WarungStockApp extends StatelessWidget {
         // Auth
         ChangeNotifierProvider(create: (_) => AuthProvider()),
 
-        // Product — inject DummyProductRepository
+        // Product — inject SupabaseProductRepository
         ChangeNotifierProvider(
-          create: (_) => ProductProvider(DummyProductRepository())..loadProducts(),
+          create: (_) =>
+              ProductProvider(SupabaseProductRepository())..loadProducts(),
         ),
 
         // Vendor — inject DummyVendorRepository
@@ -53,11 +63,11 @@ class WarungStockApp extends StatelessWidget {
         ),
 
         // Customer — inject DummyCustomerRepository
-       
 
-        // Stock — inject DummyStockRepository
+        // Stock — inject
+        // SupabaseStockRepository
         ChangeNotifierProvider(
-          create: (_) => StockProvider(DummyStockRepository())..loadAll(),
+          create: (_) => StockProvider(SupabaseStockRepository())..loadAll(),
         ),
 
         // Opname — inject DummyOpnameRepository

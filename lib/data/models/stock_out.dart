@@ -5,6 +5,7 @@ class StockOut {
   final String? customerId;
   final String? customerName;
   final List<StockOutItem> items;
+  final String? paymentMethod;
   final String? proofImagePath;
 
   StockOut({
@@ -13,6 +14,7 @@ class StockOut {
     this.customerId,
     this.customerName,
     required this.items,
+    this.paymentMethod,
     this.proofImagePath,
   });
 

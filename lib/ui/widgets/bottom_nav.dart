@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 
-/// Bottom Navigation — menu berubah sesuai role
 class BottomNav extends StatelessWidget {
   final int currentIndex;
   final String role;
@@ -23,20 +22,24 @@ class BottomNav extends StatelessWidget {
         label: 'Home',
       ),
       const BottomNavigationBarItem(
-        icon: Icon(Icons.inventory_2),
+        icon: Icon(Icons.add_circle_outline),
         label: 'Masuk',
       ),
-     const BottomNavigationBarItem(
-        icon: Icon(Icons.inventory_2),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.remove_circle_outline),
         label: 'Keluar',
       ),
-     
-      // Opname hanya untuk Admin
-      if (role == 'Admin')
+      // Menu Opname & Vendor HANYA untuk Admin
+      if (role == 'Admin') ...[
         const BottomNavigationBarItem(
           icon: Icon(Icons.fact_check),
           label: 'Opname',
         ),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.local_shipping),
+          label: 'Vendor',
+        ),
+      ],
       const BottomNavigationBarItem(
         icon: Icon(Icons.person),
         label: 'Profil',
@@ -50,6 +53,8 @@ class BottomNav extends StatelessWidget {
       selectedItemColor: AppColors.primary,
       unselectedItemColor: AppColors.textSecondary,
       showUnselectedLabels: true,
+      selectedFontSize: 10,
+      unselectedFontSize: 10,
       items: items,
     );
   }

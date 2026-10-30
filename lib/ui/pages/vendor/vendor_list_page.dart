@@ -93,6 +93,7 @@ class _VendorListPageState extends State<VendorListPage> {
                 );
               },
               backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
               icon: const Icon(Icons.add),
               label: const Text('Tambah Vendor'),
             )

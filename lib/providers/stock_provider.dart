@@ -49,15 +49,20 @@ class StockProvider extends ChangeNotifier {
   }
 
   /// Load semua stock in & out
-  Future<void> loadAll() async {
+    Future<void> loadAll() async {
     _isLoading = true;
     notifyListeners();
 
-    _stockInList = await _repository.getAllStockIn();
-    _stockOutList = await _repository.getAllStockOut();
-
-    _isLoading = false;
-    notifyListeners();
+    try {
+      // Timpa (replace) data lama dengan data dari database
+      _stockInList = await _repository.getAllStockIn();
+      _stockOutList = await _repository.getAllStockOut();
+    } catch (e) {
+      // Handle error
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   /// Tambah stock in
