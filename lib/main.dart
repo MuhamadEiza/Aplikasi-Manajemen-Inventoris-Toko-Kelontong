@@ -6,7 +6,7 @@ import 'core/constants/app_colors.dart';
 
 // Dummy Repositories
 import 'data/repositories/supabase_product_repository.dart';
-import 'data/dummy/dummy_vendor_repository.dart';
+import 'data/repositories/supabase_vendor_repository.dart';
 
 import 'data/repositories/supabase_stock_repository.dart';
 import 'data/dummy/dummy_opname_repository.dart';
@@ -57,9 +57,9 @@ class WarungStockApp extends StatelessWidget {
               ProductProvider(SupabaseProductRepository())..loadProducts(),
         ),
 
-        // Vendor — inject DummyVendorRepository
+        // Vendor — inject SupabaseVendorRepository
         ChangeNotifierProvider(
-          create: (_) => VendorProvider(DummyVendorRepository())..loadAll(),
+          create: (_) => VendorProvider(SupabaseVendorRepository())..loadAll(),
         ),
 
         // Customer — inject DummyCustomerRepository

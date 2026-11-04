@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../data/models/vendor.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/vendor_provider.dart';
 import 'vendor_form_page.dart';
@@ -28,7 +29,6 @@ class _VendorListPageState extends State<VendorListPage> {
     final vendorProvider = context.watch<VendorProvider>();
     final auth = context.watch<AuthProvider>();
 
-    // Filter
     var filtered = vendorProvider.search(_searchController.text);
 
     return Scaffold(
@@ -40,7 +40,6 @@ class _VendorListPageState extends State<VendorListPage> {
       ),
       body: Column(
         children: [
-          // Search bar
           Container(
             color: Colors.white,
             padding: const EdgeInsets.all(12),
@@ -54,15 +53,9 @@ class _VendorListPageState extends State<VendorListPage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
               ),
             ),
           ),
-
-          // List vendor
           Expanded(
             child: vendorProvider.isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -75,7 +68,7 @@ class _VendorListPageState extends State<VendorListPage> {
                           itemCount: filtered.length,
                           itemBuilder: (context, i) {
                             final v = filtered[i];
-                            return _vendorCard(v);
+                            return _vendorCard(context, vendorProvider, auth, v);
                           },
                         ),
                       ),
@@ -101,22 +94,19 @@ class _VendorListPageState extends State<VendorListPage> {
     );
   }
 
-  Widget _vendorCard(dynamic v) {
+  Widget _vendorCard(BuildContext context, VendorProvider provider, AuthProvider auth, Vendor v) {
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: AppColors.divider.withValues(alpha: 0.3),
-        ),
+        side: BorderSide(color: AppColors.divider.withValues(alpha: 0.3)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               children: [
                 CircleAvatar(
@@ -151,86 +141,53 @@ class _VendorListPageState extends State<VendorListPage> {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                
+                // ============ TOMBOL EDIT & HAPUS ============
+                if (auth.isAdmin)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit, size: 18, color: AppColors.accent),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => VendorFormPage(vendor: v),
+                            ),
+                          );
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const SizedBox(width: 12),
+                      IconButton(
+                        icon: const Icon(Icons.delete, size: 18, color: AppColors.out),
+                        onPressed: () => _showDeleteDialog(context, provider, v),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
                   ),
-                  decoration: BoxDecoration(
-                    color: AppColors.safe.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text(
-                    'Aktif',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.safe,
-                    ),
-                  ),
-                ),
               ],
             ),
             const SizedBox(height: 12),
             const Divider(height: 1),
             const SizedBox(height: 10),
-
-            // Alamat
             if (v.address != null)
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.location_on,
-                      size: 14, color: AppColors.textSecondary),
+                  const Icon(Icons.location_on, size: 14, color: AppColors.textSecondary),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       v.address!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     ),
                   ),
                 ],
               ),
-            const SizedBox(height: 8),
-
-            // Kategori yang disupply
-            if (v.suppliedCategories.isNotEmpty) ...[
-              const Text(
-                'Menyuplai:',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: v.suppliedCategories.map<Widget>((cat) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      cat,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
           ],
         ),
       ),
@@ -268,6 +225,34 @@ class _VendorListPageState extends State<VendorListPage> {
             'Tambah vendor untuk mulai catat barang masuk',
             style: TextStyle(color: AppColors.textSecondary),
             textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteDialog(BuildContext context, VendorProvider provider, Vendor vendor) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Vendor?'),
+        content: Text('Yakin ingin menghapus "${vendor.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await provider.deleteVendor(vendor.id);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Vendor berhasil dihapus'), backgroundColor: AppColors.safe),
+                );
+              }
+            },
+            child: const Text('Hapus', style: TextStyle(color: AppColors.out)),
           ),
         ],
       ),

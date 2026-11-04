@@ -194,10 +194,7 @@ class _ProductListPageState extends State<ProductListPage> {
           if (_searchController.text.isNotEmpty)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               color: AppColors.background,
               child: Text(
                 '${filtered.length} produk ditemukan',
@@ -213,29 +210,49 @@ class _ProductListPageState extends State<ProductListPage> {
             child: productProvider.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : filtered.isEmpty
-                    ? _emptyState()
-                    : RefreshIndicator(
-                        onRefresh: () => productProvider.loadProducts(),
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(12),
-                          itemCount: filtered.length,
-                          itemBuilder: (context, i) {
-                            final p = filtered[i];
-                            return ProductCard(
-                              product: p,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        ProductDetailPage(product: p),
-                                  ),
-                                );
-                              },
+                ? _emptyState()
+                : RefreshIndicator(
+                    onRefresh: () => productProvider.loadProducts(),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: filtered.length,
+                      itemBuilder: (context, i) {
+                        final p = filtered[i];
+                        return ProductCard(
+                          product: p,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ProductDetailPage(product: p),
+                              ),
                             );
                           },
-                        ),
-                      ),
+                          // Pastikan dua baris ini ada
+                          onEdit: auth.isAdmin
+                              ? () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          ProductFormPage(product: p),
+                                    ),
+                                  );
+                                }
+                              : null,
+                          onDelete: auth.isAdmin
+                              ? () {
+                                  _showDeleteDialog(
+                                    context,
+                                    productProvider,
+                                    p,
+                                  );
+                                }
+                              : null,
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -246,9 +263,7 @@ class _ProductListPageState extends State<ProductListPage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const ProductFormPage(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const ProductFormPage()),
                 );
               },
               backgroundColor: AppColors.primary,
@@ -295,14 +310,53 @@ class _ProductListPageState extends State<ProductListPage> {
             Text(
               isSearching
                   ? (_isBarcodeMode
-                      ? 'Barcode "${_searchController.text}" tidak terdaftar'
-                      : 'Coba kata kunci lain atau ubah filter kategori')
+                        ? 'Barcode "${_searchController.text}" tidak terdaftar'
+                        : 'Coba kata kunci lain atau ubah filter kategori')
                   : 'Coba ubah filter atau tambah produk baru',
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppColors.textSecondary),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ============ FUNGSI SHOW DELETE DIALOG ============
+  void _showDeleteDialog(
+    BuildContext context,
+    ProductProvider provider,
+    dynamic product,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Produk?'),
+        content: Text('Yakin ingin menghapus "${product.name}" dari database?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx); // Tutup dialog
+              await provider.deleteProduct(
+                product.id,
+              ); // Hapus via Provider -> Supabase
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Produk berhasil dihapus'),
+                    backgroundColor: AppColors.safe,
+                  ),
+                );
+              }
+            },
+            child: const Text('Hapus', style: TextStyle(color: AppColors.out)),
+          ),
+        ],
       ),
     );
   }

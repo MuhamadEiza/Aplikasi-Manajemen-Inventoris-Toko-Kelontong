@@ -5,9 +5,11 @@ import '../../../core/constants/app_colors.dart';
 import '../../../data/models/vendor.dart';
 import '../../../providers/vendor_provider.dart';
 
-/// Form Tambah Vendor
+/// Form Tambah/Edit Vendor
 class VendorFormPage extends StatefulWidget {
-  const VendorFormPage({super.key});
+  final Vendor? vendor;
+
+  const VendorFormPage({super.key, this.vendor});
 
   @override
   State<VendorFormPage> createState() => _VendorFormPageState();
@@ -19,20 +21,16 @@ class _VendorFormPageState extends State<VendorFormPage> {
   final _addressController = TextEditingController();
   final _phoneController = TextEditingController();
 
-  // Kategori yang disupply (multi-select)
-  final List<String> _allCategories = [
-    'Makanan Instan',
-    'Minuman',
-    'Snack',
-    'Sembako',
-    'Bumbu Dapur',
-    'Perawatan Tubuh',
-    'Kebersihan',
-    'Rokok',
-    'Alat Tulis',
-    'Lainnya',
-  ];
-  final Set<String> _selectedCategories = {};
+  @override
+  void initState() {
+    super.initState();
+    // Jika mode Edit, isi form dengan data lama
+    if (widget.vendor != null) {
+      _nameController.text = widget.vendor!.name;
+      _addressController.text = widget.vendor!.address ?? '';
+      _phoneController.text = widget.vendor!.phone ?? '';
+    }
+  }
 
   @override
   void dispose() {
@@ -45,30 +43,23 @@ class _VendorFormPageState extends State<VendorFormPage> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedCategories.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pilih minimal 1 kategori yang disuplai'),
-          backgroundColor: AppColors.low,
-        ),
-      );
-      return;
-    }
-
     final vendor = Vendor(
-      id: 'v${DateTime.now().millisecondsSinceEpoch}',
+      id: widget.vendor?.id ?? '', // Jika edit, gunakan ID lama
       name: _nameController.text.trim(),
       address: _addressController.text.trim(),
       phone: _phoneController.text.trim(),
-      suppliedCategories: _selectedCategories.toList(),
     );
 
-    await context.read<VendorProvider>().addVendor(vendor);
+    if (widget.vendor != null) {
+      await context.read<VendorProvider>().updateVendor(vendor);
+    } else {
+      await context.read<VendorProvider>().addVendor(vendor);
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vendor berhasil ditambahkan'),
+        SnackBar(
+          content: Text(widget.vendor != null ? 'Vendor berhasil diubah' : 'Vendor berhasil ditambahkan'),
           backgroundColor: AppColors.safe,
         ),
       );
@@ -81,7 +72,7 @@ class _VendorFormPageState extends State<VendorFormPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Tambah Vendor'),
+        title: Text(widget.vendor != null ? 'Edit Vendor' : 'Tambah Vendor'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
@@ -92,7 +83,6 @@ class _VendorFormPageState extends State<VendorFormPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ============ INFO VENDOR ============
               _sectionTitle('Info Vendor'),
               const SizedBox(height: 10),
 
@@ -103,8 +93,7 @@ class _VendorFormPageState extends State<VendorFormPage> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.local_shipping),
                 ),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Nama wajib diisi' : null,
+                validator: (v) => v == null || v.isEmpty ? 'Nama wajib diisi' : null,
               ),
               const SizedBox(height: 12),
 
@@ -116,8 +105,7 @@ class _VendorFormPageState extends State<VendorFormPage> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.phone),
                 ),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Telepon wajib diisi' : null,
+                validator: (v) => v == null || v.isEmpty ? 'Telepon wajib diisi' : null,
               ),
               const SizedBox(height: 12),
 
@@ -130,61 +118,10 @@ class _VendorFormPageState extends State<VendorFormPage> {
                   prefixIcon: Icon(Icons.location_on),
                   alignLabelWithHint: true,
                 ),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Alamat wajib diisi' : null,
-              ),
-              const SizedBox(height: 20),
-
-              // ============ KATEGORI SUPPLY ============
-              _sectionTitle('Kategori yang Disuplai *'),
-              const SizedBox(height: 4),
-              const Text(
-                'Pilih satu atau lebih',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _allCategories.map((cat) {
-                  final isSelected = _selectedCategories.contains(cat);
-                  return FilterChip(
-                    label: Text(
-                      cat,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isSelected
-                            ? Colors.white
-                            : AppColors.textPrimary,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          _selectedCategories.add(cat);
-                        } else {
-                          _selectedCategories.remove(cat);
-                        }
-                      });
-                    },
-                    selectedColor: AppColors.primary,
-                    backgroundColor: AppColors.background,
-                    checkmarkColor: Colors.white,
-                    showCheckmark: false,
-                  );
-                }).toList(),
+                validator: (v) => v == null || v.isEmpty ? 'Alamat wajib diisi' : null,
               ),
               const SizedBox(height: 24),
 
-              // ============ TOMBOL SIMPAN ============
               ElevatedButton(
                 onPressed: _save,
                 style: ElevatedButton.styleFrom(
@@ -195,9 +132,9 @@ class _VendorFormPageState extends State<VendorFormPage> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                child: const Text(
-                  'SIMPAN VENDOR',
-                  style: TextStyle(
+                child: Text(
+                  widget.vendor != null ? 'SIMPAN PERUBAHAN' : 'SIMPAN VENDOR',
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),

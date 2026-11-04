@@ -49,7 +49,7 @@ class StockProvider extends ChangeNotifier {
   }
 
   /// Load semua stock in & out
-    Future<void> loadAll() async {
+  Future<void> loadAll() async {
     _isLoading = true;
     notifyListeners();
 
@@ -58,7 +58,8 @@ class StockProvider extends ChangeNotifier {
       _stockInList = await _repository.getAllStockIn();
       _stockOutList = await _repository.getAllStockOut();
     } catch (e) {
-      // Handle error
+      // Handle error (bisa ditambahkan print jika ingin debug)
+      debugPrint('Error loading data: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -71,9 +72,27 @@ class StockProvider extends ChangeNotifier {
     await loadAll();
   }
 
+  /// Update stock in (Untuk Fitur Edit)
+  Future<void> updateStockIn(StockIn stockIn) async {
+    await _repository.updateStockIn(stockIn);
+    await loadAll();
+  }
+
+  /// Hapus stock in
+  Future<void> deleteStockIn(String id) async {
+    await _repository.deleteStockIn(id);
+    await loadAll(); // Refresh list setelah dihapus
+  }
+
   /// Tambah stock out
   Future<void> addStockOut(StockOut stockOut) async {
     await _repository.addStockOut(stockOut);
+    await loadAll();
+  }
+
+  /// Hapus stock out
+  Future<void> deleteStockOut(String id) async {
+    await _repository.deleteStockOut(id);
     await loadAll();
   }
 }

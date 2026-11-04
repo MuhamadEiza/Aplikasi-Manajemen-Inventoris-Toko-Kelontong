@@ -25,12 +25,14 @@ class StockIn {
 class StockInItem {
   final String productId;
   final String productName;
+  final String category; 
   final int quantity;
   final double purchasePrice;
 
   StockInItem({
     required this.productId,
     required this.productName,
+    this.category = 'Sembako',
     required this.quantity,
     required this.purchasePrice,
   });

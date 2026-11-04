@@ -7,7 +7,6 @@ import '../../../providers/stock_provider.dart';
 import 'transaction_form_page.dart';
 import 'transaction_detail_page.dart';
 
-/// Halaman Khusus Barang Masuk
 class StockInListPage extends StatelessWidget {
   const StockInListPage({super.key});
 
@@ -50,6 +49,20 @@ class StockInListPage extends StatelessWidget {
                               builder: (_) => TransactionDetailPage(stockIn: si),
                             ),
                           );
+                        },
+                        onEdit: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => TransactionFormPage(
+                                isStockIn: true,
+                                stockInToEdit: si, // <-- Mengirim data ke form
+                              ),
+                            ),
+                          );
+                        },
+                        onDelete: () {
+                          _showDeleteDialog(context, provider, si.id);
                         },
                       );
                     },
@@ -103,10 +116,39 @@ class StockInListPage extends StatelessWidget {
       ),
     );
   }
+
+  void _showDeleteDialog(BuildContext context, StockProvider provider, String id) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Transaksi?'),
+        content: const Text('Yakin ingin menghapus transaksi barang masuk ini? Data yang dihapus tidak bisa dikembalikan.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await provider.deleteStockIn(id); // <-- Eksekusi hapus ke database
+              
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Transaksi berhasil dihapus'), backgroundColor: AppColors.safe),
+                );
+              }
+            },
+            child: const Text('Hapus', style: TextStyle(color: AppColors.out)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ============================================================================
-// WIDGET CARD (Bisa dipakai bareng di file Keluar)
+// WIDGET CARD
 // ============================================================================
 Widget _buildTransactionCard({
   required BuildContext context,
@@ -119,6 +161,8 @@ Widget _buildTransactionCard({
   double? profit,
   required bool hasProof,
   required VoidCallback onTap,
+  VoidCallback? onEdit,
+  VoidCallback? onDelete,
 }) {
   final color = isStockIn ? AppColors.safe : AppColors.low;
   final icon = isStockIn ? Icons.add_circle : Icons.remove_circle;
@@ -166,7 +210,29 @@ Widget _buildTransactionCard({
                     ],
                   ),
                 ),
-                if (hasProof)
+                if (onEdit != null || onDelete != null)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (onEdit != null)
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 18, color: AppColors.accent),
+                          onPressed: onEdit,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      if (onDelete != null) ...[
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.delete, size: 18, color: AppColors.out),
+                          onPressed: onDelete,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ],
+                  )
+                else if (hasProof)
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(

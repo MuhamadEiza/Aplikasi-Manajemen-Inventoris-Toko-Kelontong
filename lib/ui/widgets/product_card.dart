@@ -10,11 +10,15 @@ import 'status_badge.dart';
 class ProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback? onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const ProductCard({
     super.key,
     required this.product,
     this.onTap,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -36,7 +40,7 @@ class ProductCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ============ BARIS 1: NAMA + BADGE ============
+              // ============ BARIS 1: NAMA + BADGE + TOMBOL ============
               Row(
                 children: [
                   Expanded(
@@ -50,6 +54,27 @@ class ProductCard extends StatelessWidget {
                     ),
                   ),
                   StatusBadge(status: product.stockStatus),
+                  
+                  // Tombol Edit & Hapus
+                  if (onEdit != null || onDelete != null) ...[
+                    const SizedBox(width: 8),
+                    if (onEdit != null)
+                      InkWell(
+                        onTap: onEdit,
+                        child: const Padding(
+                          padding: EdgeInsets.all(4.0),
+                          child: Icon(Icons.edit, size: 18, color: AppColors.accent),
+                        ),
+                      ),
+                    if (onDelete != null)
+                      InkWell(
+                        onTap: onDelete,
+                        child: const Padding(
+                          padding: EdgeInsets.all(4.0),
+                          child: Icon(Icons.delete, size: 18, color: AppColors.out),
+                        ),
+                      ),
+                  ],
                 ],
               ),
               const SizedBox(height: 4),
@@ -61,7 +86,7 @@ class ProductCard extends StatelessWidget {
                 ),
               ),
 
-              // ============ BARCODE (BARU) ============
+              // ============ BARCODE ============
               if (product.hasBarcode) ...[
                 const SizedBox(height: 8),
                 Container(
