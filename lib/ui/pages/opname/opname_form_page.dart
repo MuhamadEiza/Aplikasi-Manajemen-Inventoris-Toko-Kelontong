@@ -6,6 +6,8 @@ import '../../../data/models/stock_opname.dart';
 import '../../../providers/opname_provider.dart';
 import '../../../providers/product_provider.dart';
 
+import 'package:mobile_scanner/mobile_scanner.dart';
+
 /// Form Opname Baru — dengan scan barcode + input stok fisik
 class OpnameFormPage extends StatefulWidget {
   const OpnameFormPage({super.key});
@@ -71,30 +73,33 @@ class _OpnameFormPageState extends State<OpnameFormPage> {
   }
 
   /// Placeholder scan kamera
-  void _scanWithCamera() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Row(
-          children: [
-            Icon(Icons.qr_code_scanner, color: AppColors.primary),
-            SizedBox(width: 8),
-            Text('Scan Barcode'),
-          ],
-        ),
-        content: const Text(
-          'Fitur scan kamera akan aktif setelah UAS.\n\n'
-          'Untuk saat ini, silakan ketik barcode manual lalu tekan tombol cari.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
+  void _scanWithCamera() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => Scaffold(
+          appBar: AppBar(title: const Text('Scan Barcode Opname')),
+          body: MobileScanner(
+            onDetect: (capture) {
+              final List<Barcode> barcodes = capture.barcodes;
+              for (final barcode in barcodes) {
+                if (barcode.rawValue != null) {
+                  Navigator.pop(ctx, barcode.rawValue);
+                  break;
+                }
+              }
+            },
           ),
-        ],
+        ),
       ),
     );
+
+    if (result != null) {
+      setState(() {
+        _barcodeController.text = result.toString();
+      });
+      _searchByBarcode(); // Otomatis cari produk berdasarkan barcode
+    }
   }
 
   /// Tambah item ke list opname

@@ -2,11 +2,13 @@
 class StockOpname {
   final String id;
   final DateTime date;
+  final String? note;
   final List<StockOpnameItem> items;
 
   StockOpname({
     required this.id,
     required this.date,
+    this.note, 
     required this.items,
   });
 

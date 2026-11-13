@@ -25,11 +25,12 @@ class SupabaseStockRepository implements StockRepository {
         vendorId: data['vendor_id'],
         vendorName: data['vendor_name'],
         proofImagePath: data['proof_image_path'],
+        initialStock: itemsData.isNotEmpty ? itemsData.first['quantity'] : 0,
         items: itemsData.map((item) {
           return StockInItem(
             productId: item['product_id'],
             productName: item['product_name'] ?? 'Tanpa Nama',
-            category: item['category'] ?? 'Sembako', // <-- Ambil dari database
+            category: item['category'] ?? 'Sembako',
             quantity: item['quantity'],
             purchasePrice: (item['purchase_price'] as num).toDouble(),
           );
@@ -38,8 +39,9 @@ class SupabaseStockRepository implements StockRepository {
     }).toList();
   }
 
-  @override
+   @override
   Future<void> addStockIn(StockIn stockIn) async {
+    // 1. Simpan Header
     final headerRes = await _supabase
         .from('stock_in')
         .insert({
@@ -54,41 +56,47 @@ class SupabaseStockRepository implements StockRepository {
 
     final newStockInId = headerRes['id'];
 
-    final itemsToInsert = stockIn.items.map((item) {
-      // Upsert ke produk
-      _supabase.from('products').upsert({
+    // 2. Simpan Item dan Produk satu per satu (TUNGGU SELESAI)
+    for (var item in stockIn.items) {
+      // Simpan ke Master Produk
+      await _supabase.from('products').upsert({
         'id': item.productId,
         'name': item.productName,
-        'category': item.category, // <-- Simpan kategori yang benar
+        'category': item.category,
         'unit': 'pcs',
         'purchase_price': item.purchasePrice,
         'selling_price': item.purchasePrice * 1.2,
+        'initial_stock': item.quantity,
         'current_stock': item.quantity,
         'minimum_stock': 5,
       }, onConflict: 'id');
 
-      return {
+      // Simpan ke Detail Transaksi
+      await _supabase.from('stock_in_items').insert({
         'stock_in_id': newStockInId,
         'product_id': item.productId,
         'product_name': item.productName,
-        'category': item.category, // <-- Simpan kategori ke items
+        'category': item.category,
         'quantity': item.quantity,
         'purchase_price': item.purchasePrice,
-      };
-    }).toList();
-
-    await _supabase.from('stock_in_items').insert(itemsToInsert);
+      });
+    }
   }
-
   @override
   Future<void> updateStockIn(StockIn stockIn) async {
-    await _supabase.from('stock_in').update({
-      'vendor_id': stockIn.vendorId,
-      'vendor_name': stockIn.vendorName,
-      'proof_image_path': stockIn.proofImagePath,
-    }).eq('id', stockIn.id);
+    await _supabase
+        .from('stock_in')
+        .update({
+          'vendor_id': stockIn.vendorId,
+          'vendor_name': stockIn.vendorName,
+          'proof_image_path': stockIn.proofImagePath,
+        })
+        .eq('id', stockIn.id);
 
-    await _supabase.from('stock_in_items').delete().eq('stock_in_id', stockIn.id);
+    await _supabase
+        .from('stock_in_items')
+        .delete()
+        .eq('stock_in_id', stockIn.id);
 
     final itemsToInsert = stockIn.items.map((item) {
       return {
@@ -102,7 +110,7 @@ class SupabaseStockRepository implements StockRepository {
     }).toList();
 
     await _supabase.from('stock_in_items').insert(itemsToInsert);
-    
+
     for (var item in stockIn.items) {
       await _supabase.from('products').upsert({
         'id': item.productId,
@@ -152,8 +160,9 @@ class SupabaseStockRepository implements StockRepository {
     }).toList();
   }
 
-  @override
+    @override
   Future<void> addStockOut(StockOut stockOut) async {
+    // 1. Simpan Header Transaksi
     final headerRes = await _supabase
         .from('stock_out')
         .insert({
@@ -167,6 +176,7 @@ class SupabaseStockRepository implements StockRepository {
 
     final newStockOutId = headerRes['id'];
 
+    // 2. Simpan Detail Item
     final itemsToInsert = stockOut.items.map((item) {
       return {
         'stock_out_id': newStockOutId,
@@ -179,6 +189,29 @@ class SupabaseStockRepository implements StockRepository {
     }).toList();
 
     await _supabase.from('stock_out_items').insert(itemsToInsert);
+
+    // 3. KURANGI STOK DI MASTER PRODUK
+    for (var item in stockOut.items) {
+      // Ambil stok saat ini
+      final productData = await _supabase
+          .from('products')
+          .select('current_stock')
+          .eq('id', item.productId)
+          .maybeSingle();
+
+      if (productData != null) {
+        int currentStock = (productData['current_stock'] as num?)?.toInt() ?? 0;
+        int newStock = currentStock - item.quantity;
+
+        // Jangan biarkan stok minus (jika ingin mencegah minus)
+        if (newStock < 0) newStock = 0;
+
+        // Update stok baru ke database
+        await _supabase
+            .from('products')
+            .update({'current_stock': newStock}).eq('id', item.productId);
+      }
+    }
   }
 
   @override

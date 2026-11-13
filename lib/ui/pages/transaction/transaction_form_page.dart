@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../data/models/product.dart';
 import '../../../data/models/stock_in.dart';
 import '../../../data/models/stock_out.dart';
 import '../../../providers/product_provider.dart';
@@ -37,6 +39,22 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
   final _manualNameController = TextEditingController();
   final _manualCategoryController = TextEditingController(text: 'Sembako');
   final _manualPriceController = TextEditingController();
+  
+  // Controller untuk Harga Jual Manual (Barang Keluar)
+  final _sellingPriceController = TextEditingController();
+
+  final List<String> _categories = [
+    'Makanan Instan',
+    'Minuman',
+    'Snack',
+    'Sembako',
+    'Bumbu Dapur',
+    'Perawatan Tubuh',
+    'Kebersihan',
+    'Rokok',
+    'Alat Tulis',
+    'Lainnya',
+  ];
 
   String? _proofPath;
   final List<Map<String, dynamic>> _items = [];
@@ -44,11 +62,14 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
   @override
   void initState() {
     super.initState();
-    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProductProvider>().loadProducts();
+    });
+
     if (widget.stockInToEdit != null) {
       final data = widget.stockInToEdit!;
       _selectedVendorId = data.vendorId;
-      
+
       for (var item in data.items) {
         _items.add({
           'productId': item.productId,
@@ -60,21 +81,26 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
           'unit': 'pcs',
         });
       }
-      
+
       if (data.items.isNotEmpty) {
         final firstItem = data.items.first;
-        _barcodeController.text = firstItem.productId; 
-        
-        final masterProduct = context.read<ProductProvider>().getById(firstItem.productId);
-        
+        _barcodeController.text = firstItem.productId;
+
+        final masterProduct = context.read<ProductProvider>().getById(
+          firstItem.productId,
+        );
+
         if (masterProduct != null) {
           _manualNameController.text = masterProduct.name;
           _manualCategoryController.text = masterProduct.category;
         } else {
-          _manualNameController.text = firstItem.productName.replaceAll('Produk ID: ', '');
+          _manualNameController.text = firstItem.productName.replaceAll(
+            'Produk ID: ',
+            '',
+          );
           _manualCategoryController.text = firstItem.category;
         }
-        
+
         _manualPriceController.text = firstItem.purchasePrice.toStringAsFixed(0);
       }
     }
@@ -87,6 +113,7 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
     _manualNameController.dispose();
     _manualCategoryController.dispose();
     _manualPriceController.dispose();
+    _sellingPriceController.dispose(); // Dispose controller baru
     super.dispose();
   }
 
@@ -118,6 +145,7 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
         _manualPriceController.text = product.purchasePrice.toStringAsFixed(0);
       } else {
         _selectedProductId = product.id;
+        _sellingPriceController.text = product.sellingPrice.toStringAsFixed(0); // Isi otomatis
       }
     });
 
@@ -129,22 +157,33 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
     );
   }
 
-  void _scanWithCamera() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Scan Barcode'),
-        content: const Text(
-          'Fitur scan kamera aktif setelah UAS. Sementara ketik barcode manual.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
+  void _scanWithCamera() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => Scaffold(
+          appBar: AppBar(title: const Text('Scan Barcode')),
+          body: MobileScanner(
+            onDetect: (capture) {
+              final List<Barcode> barcodes = capture.barcodes;
+              for (final barcode in barcodes) {
+                if (barcode.rawValue != null) {
+                  Navigator.pop(ctx, barcode.rawValue);
+                  break;
+                }
+              }
+            },
           ),
-        ],
+        ),
       ),
     );
+
+    if (result != null) {
+      setState(() {
+        _barcodeController.text = result.toString();
+      });
+      _searchByBarcode();
+    }
   }
 
   void _addItem() {
@@ -156,8 +195,7 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
     }
 
     if (widget.isStockIn) {
-      if (_manualNameController.text.isEmpty ||
-          _manualPriceController.text.isEmpty) {
+      if (_manualNameController.text.isEmpty || _manualPriceController.text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Nama dan Harga wajib diisi')),
         );
@@ -165,16 +203,27 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
       }
 
       final price = double.tryParse(_manualPriceController.text) ?? 0;
+      final inputName = _manualNameController.text.trim();
+      final barcodeInput = _barcodeController.text.trim();
 
-      final newProductId = (widget.stockInToEdit != null && _items.isNotEmpty)
-          ? _items.first['productId']
-          : const Uuid().v4();
+      final productProvider = context.read<ProductProvider>();
+      final existingProduct = productProvider.products.firstWhere(
+        (p) => p.name.toLowerCase() == inputName.toLowerCase(),
+        orElse: () => Product(
+          id: '', name: '', category: '', unit: '', 
+          purchasePrice: 0, sellingPrice: 0, currentStock: 0, minimumStock: 0
+        ),
+      );
+
+      final newProductId = existingProduct.id.isNotEmpty
+          ? existingProduct.id
+          : (barcodeInput.isNotEmpty ? barcodeInput : const Uuid().v4());
 
       setState(() {
         if (widget.stockInToEdit != null && _items.isNotEmpty) {
           _items[0] = {
             'productId': newProductId,
-            'name': _manualNameController.text.trim(),
+            'name': inputName,
             'category': _manualCategoryController.text.trim(),
             'qty': qty,
             'price': price,
@@ -184,7 +233,7 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
         } else {
           _items.add({
             'productId': newProductId,
-            'name': _manualNameController.text.trim(),
+            'name': inputName,
             'category': _manualCategoryController.text.trim(),
             'qty': qty,
             'price': price,
@@ -194,8 +243,7 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
         }
 
         _qtyController.text = '1';
-        
-        // JIKA BUKAN MODE EDIT, BARU KOSONGKAN FORM
+
         if (widget.stockInToEdit == null) {
           _manualNameController.clear();
           _manualPriceController.clear();
@@ -209,24 +257,26 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
         return;
       }
 
-      final product = context.read<ProductProvider>().getById(
-        _selectedProductId!,
-      );
+      final product = context.read<ProductProvider>().getById(_selectedProductId!);
       if (product == null) return;
+
+      // AMBIL HARGA JUAL DARI INPUT MANUAL
+      final customSellingPrice = double.tryParse(_sellingPriceController.text) ?? product.sellingPrice;
 
       setState(() {
         _items.add({
           'productId': product.id,
           'name': product.name,
-          'category': _manualCategoryController.text.trim(),
+          'category': product.category,
           'qty': qty,
-          'price': product.sellingPrice,
+          'price': customSellingPrice, // Gunakan harga jual manual
           'purchasePrice': product.purchasePrice,
           'unit': product.unit,
         });
         _qtyController.text = '1';
         _selectedProductId = null;
         _barcodeController.clear();
+        _sellingPriceController.clear(); // Kosongkan setelah ditambahkan
       });
     }
   }
@@ -237,9 +287,8 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
 
   Future<void> _save() async {
     if (_items.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Tambahkan minimal 1 item')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Tambahkan minimal 1 item')));
       return;
     }
 
@@ -250,76 +299,62 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
     }
 
     final provider = context.read<StockProvider>();
-    final id =
-        widget.stockInToEdit?.id ??
-        '${widget.isStockIn ? 'si' : 'so'}${DateTime.now().millisecondsSinceEpoch}';
+    final id = widget.stockInToEdit?.id ?? '${widget.isStockIn ? 'si' : 'so'}${DateTime.now().millisecondsSinceEpoch}';
 
     try {
       if (widget.isStockIn) {
-        final vendor = context.read<VendorProvider>().getById(
-          _selectedVendorId!,
-        );
+        final vendor = context.read<VendorProvider>().getById(_selectedVendorId!);
         final stockIn = StockIn(
           id: id,
           date: DateTime.now(),
           vendorId: _selectedVendorId,
           vendorName: vendor?.name ?? 'Vendor tidak diketahui',
-          items: _items
-              .map(
-                (item) => StockInItem(
-                  productId: item['productId'],
-                  productName: item['name'],
-                  category: item['category'] ?? 'Sembako',
-                  quantity: item['qty'],
-                  purchasePrice: item['price'],
-                ),
-              )
-              .toList(),
+          items: _items.map((item) => StockInItem(
+            productId: item['productId'],
+            productName: item['name'],
+            category: item['category'] ?? 'Sembako',
+            quantity: item['qty'],
+            purchasePrice: item['price'],
+          )).toList(),
           proofImagePath: _proofPath,
+          initialStock: _items.isNotEmpty ? _items.first['qty'] : 0,
         );
-
         if (widget.stockInToEdit != null) {
           await provider.updateStockIn(stockIn);
         } else {
           await provider.addStockIn(stockIn);
         }
+        
+        if (mounted) await context.read<ProductProvider>().loadProducts();
       } else {
         final stockOut = StockOut(
           id: id,
           date: DateTime.now(),
-          items: _items
-              .map(
-                (item) => StockOutItem(
-                  productId: item['productId'],
-                  productName: item['name'],
-                  quantity: item['qty'],
-                  sellingPrice: item['price'],
-                  purchasePrice: item['purchasePrice'],
-                ),
-              )
-              .toList(),
+          items: _items.map((item) => StockOutItem(
+            productId: item['productId'],
+            productName: item['name'],
+            quantity: item['qty'],
+            sellingPrice: item['price'],
+            purchasePrice: item['purchasePrice'],
+          )).toList(),
           paymentMethod: _selectedPaymentMethod,
           proofImagePath: _proofPath,
         );
         await provider.addStockOut(stockOut);
+
+        if (mounted) await context.read<ProductProvider>().loadProducts();
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Transaksi berhasil disimpan'),
-            backgroundColor: AppColors.safe,
-          ),
+          SnackBar(content: Text('Transaksi berhasil disimpan'), backgroundColor: AppColors.safe),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal menyimpan: $e'),
-            backgroundColor: AppColors.out,
-          ),
+          SnackBar(content: Text('Gagal menyimpan: $e'), backgroundColor: AppColors.out),
         );
       }
     }
@@ -346,29 +381,24 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // ============ VENDOR ============
             if (widget.isStockIn) ...[
               _sectionTitle('Vendor / Agen *'),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                initialValue:
-                    vendorProvider.vendors.any((v) => v.id == _selectedVendorId)
-                    ? _selectedVendorId
-                    : null,
+                initialValue: vendorProvider.vendors.any((v) => v.id == _selectedVendorId) ? _selectedVendorId : null,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.local_shipping),
                   hintText: 'Pilih vendor',
                 ),
-                items: vendorProvider.vendors
-                    .map(
-                      (v) => DropdownMenuItem(value: v.id, child: Text(v.name)),
-                    )
-                    .toList(),
+                items: vendorProvider.vendors.map((v) => DropdownMenuItem(value: v.id, child: Text(v.name))).toList(),
                 onChanged: (v) => setState(() => _selectedVendorId = v),
               ),
               const SizedBox(height: 20),
             ],
 
+            // ============ SCAN BARCODE ============
             _sectionTitle('Scan / Barcode'),
             const SizedBox(height: 8),
             TextField(
@@ -382,20 +412,15 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                 suffixIcon: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.search),
-                      onPressed: _searchByBarcode,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.qr_code_scanner),
-                      onPressed: _scanWithCamera,
-                    ),
+                    IconButton(icon: const Icon(Icons.search), onPressed: _searchByBarcode),
+                    IconButton(icon: const Icon(Icons.qr_code_scanner), onPressed: _scanWithCamera),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 20),
 
+            // ============ FORM PRODUK ============
             if (widget.isStockIn) ...[
               _sectionTitle('Informasi Produk'),
               const SizedBox(height: 8),
@@ -411,12 +436,18 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
               Row(
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: _manualCategoryController,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _categories.contains(_manualCategoryController.text) ? _manualCategoryController.text : 'Sembako',
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Kategori',
                         border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 15),
                       ),
+                      items: _categories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat, overflow: TextOverflow.ellipsis))).toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => _manualCategoryController.text = val);
+                      },
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -424,10 +455,7 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                     child: TextField(
                       controller: _manualPriceController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Harga Beli',
-                        border: OutlineInputBorder(),
-                      ),
+                      decoration: const InputDecoration(labelText: 'Harga Beli', border: OutlineInputBorder()),
                     ),
                   ),
                 ],
@@ -436,33 +464,53 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
               _sectionTitle('Pilih Produk (Dropdown)'),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                initialValue:
-                    productProvider.products.any(
-                      (p) => p.id == _selectedProductId,
-                    )
-                    ? _selectedProductId
-                    : null,
+                initialValue: productProvider.products.any((p) => p.id == _selectedProductId) ? _selectedProductId : null,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.inventory_2),
                   hintText: 'Pilih produk',
                 ),
-                items: productProvider.products
-                    .map(
-                      (p) => DropdownMenuItem(
-                        value: p.id,
-                        child: Text(
-                          '${p.name} (Stok: ${p.currentStock} ${p.unit})',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => _selectedProductId = v),
+                items: productProvider.products.map((p) => DropdownMenuItem(
+                  value: p.id,
+                  child: Text('${p.name} (Stok: ${p.currentStock} ${p.unit})', overflow: TextOverflow.ellipsis),
+                )).toList(),
+                onChanged: (v) {
+                  setState(() {
+                    _selectedProductId = v;
+                    if (v != null) {
+                      final selectedProduct = productProvider.getById(v);
+                      if (selectedProduct != null) {
+                        _barcodeController.text = selectedProduct.id;
+                        _sellingPriceController.text = selectedProduct.sellingPrice.toStringAsFixed(0);
+                      }
+                    } else {
+                      _barcodeController.clear();
+                      _sellingPriceController.clear();
+                    }
+                  });
+                },
+              ),
+              
+              // ==========================================
+              // TAMBAHAN INPUT HARGA JUAL MANUAL
+              // ==========================================
+              const SizedBox(height: 16),
+              _sectionTitle('Harga Jual (Bisa Diedit)'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _sellingPriceController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Harga Jual Akhir',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.sell),
+                  hintText: 'Ubah harga jual jika perlu',
+                ),
               ),
             ],
             const SizedBox(height: 20),
 
+            // ============ JUMLAH ============
             _sectionTitle('Jumlah (pcs)'),
             const SizedBox(height: 8),
             Row(
@@ -472,10 +520,7 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                   child: TextField(
                     controller: _qtyController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
+                    decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -483,20 +528,14 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                   flex: 3,
                   child: ElevatedButton(
                     onPressed: _addItem,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text(
-                      'Tambah Item',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
+                    child: const Text('Tambah Item', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
             ),
 
+            // ============ LIST ITEM ============
             if (_items.isNotEmpty) ...[
               const SizedBox(height: 20),
               ..._items.asMap().entries.map((e) {
@@ -505,101 +544,25 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                 return Card(
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
-                    title: Text(
-                      item['name'],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                    subtitle: Text(
-                      '${item['qty']} pcs × ${CurrencyFormatter.formatRupiah(item['price'])}',
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.close, color: AppColors.out),
-                      onPressed: () => _removeItem(i),
-                    ),
+                    title: Text(item['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    subtitle: Text('${item['qty']} pcs × ${CurrencyFormatter.formatRupiah(item['price'])}'),
+                    trailing: IconButton(icon: const Icon(Icons.close, color: AppColors.out), onPressed: () => _removeItem(i)),
                   ),
                 );
               }),
             ],
 
-            // ============ BUKTI TRANSAKSI ============
-            if (_items.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              _sectionTitle('Bukti Nota / Faktur'),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: () {
-                  setState(() {
-                    _proofPath = _proofPath == null ? 'dummy/nota_001.jpg' : null;
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(_proofPath == null ? 'Bukti dihapus' : 'Bukti ditambahkan (simulasi)'),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: _proofPath == null ? AppColors.background : AppColors.safe.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: _proofPath == null ? AppColors.divider : AppColors.safe,
-                      width: 2,
-                    ),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _proofPath == null ? Icons.camera_alt : Icons.check_circle,
-                          size: 30,
-                          color: _proofPath == null ? AppColors.textSecondary : AppColors.safe,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _proofPath == null ? 'Tap untuk upload bukti' : 'Bukti terlampir ✓',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _proofPath == null ? AppColors.textSecondary : AppColors.safe,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-
+            // ============ TOTAL ============
             if (_items.isNotEmpty) ...[
               const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Total',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      CurrencyFormatter.formatRupiah(_total),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: AppColors.primary,
-                      ),
-                    ),
+                    const Text('Total', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(CurrencyFormatter.formatRupiah(_total), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
                   ],
                 ),
               ),
@@ -607,38 +570,21 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
 
             const SizedBox(height: 24),
 
+            // ============ TOMBOL SIMPAN ============
             ElevatedButton(
-              onPressed: (_items.isEmpty || _isSaving)
-                  ? null
-                  : () async {
-                      setState(() => _isSaving = true);
-                      await _save();
-                      if (mounted) setState(() => _isSaving = false);
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                disabledBackgroundColor: AppColors.divider,
-              ),
+              onPressed: (_items.isEmpty || _isSaving) ? null : () async {
+                setState(() => _isSaving = true);
+                await _save();
+                if (mounted) setState(() => _isSaving = false);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(vertical: 16), disabledBackgroundColor: AppColors.divider),
               child: _isSaving
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                   : Text(
                       widget.stockInToEdit != null
                           ? 'SIMPAN PERUBAHAN'
-                          : (widget.isStockIn
-                                ? 'SIMPAN BARANG MASUK'
-                                : 'SIMPAN BARANG KELUAR'),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          : (widget.isStockIn ? 'SIMPAN BARANG MASUK' : 'SIMPAN BARANG KELUAR'),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     ),
             ),
           ],
@@ -650,11 +596,7 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
   Widget _sectionTitle(String title) {
     return Text(
       title,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: AppColors.textPrimary,
-      ),
+      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
     );
   }
 }

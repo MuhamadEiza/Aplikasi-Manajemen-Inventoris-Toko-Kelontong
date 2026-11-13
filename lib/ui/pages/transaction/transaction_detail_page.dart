@@ -5,7 +5,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../data/models/stock_in.dart';
 import '../../../data/models/stock_out.dart';
 
-/// Detail Transaksi (Stock In / Stock Out) + Bukti
+/// Detail Transaksi (Stock In / Stock Out)
 class TransactionDetailPage extends StatelessWidget {
   final StockIn? stockIn;
   final StockOut? stockOut;
@@ -166,18 +166,26 @@ class TransactionDetailPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   _summaryRow(
-                    'Total Unit',
+                    'Total Unit (Transaksi)',
                     '${_isStockIn ? stockIn!.totalQuantity : stockOut!.totalQuantity} unit',
                   ),
+                  
+                  // ============ TAMBAHAN STOK AWAL ============
+                  // Mengambil langsung dari stockIn.initialStock (bukan dari provider)
+                  if (_isStockIn) ...[
+                    const SizedBox(height: 8),
+                    const Divider(height: 1),
+                    const SizedBox(height: 8),
+                    _summaryRow(
+                      'Stok Awal (Master Produk)',
+                      '${stockIn!.initialStock} unit',
+                      isBold: true,
+                      color: AppColors.textPrimary,
+                    ),
+                  ],
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-
-            // ============ BUKTI ============
-            _sectionTitle('Bukti Transaksi'),
-            const SizedBox(height: 8),
-            _proofSection(),
             const SizedBox(height: 20),
           ],
         ),
@@ -285,104 +293,11 @@ class TransactionDetailPage extends StatelessWidget {
           value,
           style: TextStyle(
             fontSize: 13,
-            fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             color: color ?? AppColors.textPrimary,
           ),
         ),
       ],
-    );
-  }
-
-  Widget _proofSection() {
-    final proofPath = _isStockIn
-        ? stockIn!.proofImagePath
-        : stockOut!.proofImagePath;
-
-    if (proofPath == null) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: AppColors.divider.withValues(alpha: 0.3),
-          ),
-        ),
-        child: const Row(
-          children: [
-            Icon(Icons.image_not_supported,
-                color: AppColors.textSecondary, size: 20),
-            SizedBox(width: 10),
-            Text(
-              'Tidak ada bukti terlampir',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.safe.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: AppColors.safe.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Column(
-        children: [
-          Container(
-            height: 140,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: AppColors.divider.withValues(alpha: 0.3),
-              ),
-            ),
-            child: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.image, size: 48, color: AppColors.primary),
-                  SizedBox(height: 8),
-                  Text(
-                    'Foto Bukti (Simulasi)',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const Icon(Icons.check_circle,
-                  color: AppColors.safe, size: 16),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  proofPath,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 

@@ -13,6 +13,7 @@ import 'vendor/vendor_list_page.dart';
 import 'opname/opname_list_page.dart';
 import 'transaction/stock_in_list_page.dart';
 import 'transaction/stock_out_list_page.dart';
+import 'product/stock_card_page.dart';
 
 /// Dashboard — halaman utama setelah login
 class DashboardPage extends StatefulWidget {
@@ -24,6 +25,16 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Paksa tarik data terbaru dari Supabase setiap kali dashboard dibuka
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProductProvider>().loadProducts();
+      context.read<StockProvider>().loadAll();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +90,10 @@ class _DashboardPageState extends State<DashboardPage> {
     final productProvider = context.watch<ProductProvider>();
     final stockProvider = context.watch<StockProvider>();
     final auth = context.watch<AuthProvider>();
+
+    // Urutkan produk berdasarkan stok terbanyak untuk Top Barang
+    final topProducts = List.from(productProvider.products)
+      ..sort((a, b) => b.currentStock.compareTo(a.currentStock));
 
     return SafeArea(
       child: RefreshIndicator(
@@ -192,11 +207,32 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
               const SizedBox(height: 20),
 
-              // ============ TOMBOL AKSI CEPAT ============
+              // ============ TOMBOL KARTU STOK ============
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _quickAction(
+                      icon: Icons.credit_card,
+                      label: 'Kartu\nStok',
+                      color: AppColors.primary,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const StockCardPage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
 
-              // ============ TOP 3 TERLARIS ============
+              // ============ TOP 3 BARANG (Berdasarkan Stok) ============
               const Text(
-                'Top Barang Terlaris',
+                'Top Stok Terbanyak',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -212,13 +248,28 @@ class _DashboardPageState extends State<DashboardPage> {
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
-                    children: [
-                      _topItem(1, 'Indomie Goreng', '1.245 pcs'),
-                      const Divider(height: 16),
-                      _topItem(2, 'Aqua 600ml', '1.180 botol'),
-                      const Divider(height: 16),
-                      _topItem(3, 'Beras Premium', '980 kg'),
-                    ],
+                    children: topProducts.isNotEmpty
+                        ? topProducts
+                            .take(3)
+                            .toList()
+                            .asMap()
+                            .entries
+                            .map((e) {
+                            final index = e.key;
+                            final p = e.value;
+                            return Column(
+                              children: [
+                                _topItem(
+                                  index + 1,
+                                  p.name,
+                                  '${p.currentStock} ${p.unit}',
+                                ),
+                                if (index < 2 && index < topProducts.length - 1)
+                                  const Divider(height: 16),
+                              ],
+                            );
+                          }).toList()
+                        : [const Text('Belum ada produk')],
                   ),
                 ),
               ),
@@ -363,15 +414,6 @@ class _DashboardPageState extends State<DashboardPage> {
           style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
         ),
       ],
-    );
-  }
-
-  void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature — akan dibuat di step berikutnya'),
-        duration: const Duration(seconds: 1),
-      ),
     );
   }
 }

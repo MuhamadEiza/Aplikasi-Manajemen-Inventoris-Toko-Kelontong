@@ -7,8 +7,21 @@ import '../../../providers/stock_provider.dart';
 import 'transaction_form_page.dart';
 import 'transaction_detail_page.dart';
 
-class StockInListPage extends StatelessWidget {
+class StockInListPage extends StatefulWidget {
   const StockInListPage({super.key});
+
+  @override
+  State<StockInListPage> createState() => _StockInListPageState();
+}
+
+class _StockInListPageState extends State<StockInListPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<StockProvider>().loadAll();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +51,7 @@ class StockInListPage extends StatelessWidget {
                         isStockIn: true,
                         date: si.date,
                         title: si.vendorName ?? 'Vendor tidak diketahui',
+                        subtitle: si.items.map((e) => e.productName).join(', '),
                         itemCount: si.totalProducts,
                         totalQty: si.totalQuantity,
                         total: si.total,
@@ -56,7 +70,7 @@ class StockInListPage extends StatelessWidget {
                             MaterialPageRoute(
                               builder: (_) => TransactionFormPage(
                                 isStockIn: true,
-                                stockInToEdit: si, // <-- Mengirim data ke form
+                                stockInToEdit: si,
                               ),
                             ),
                           );
@@ -69,13 +83,19 @@ class StockInListPage extends StatelessWidget {
                   ),
                 ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          // Tunggu sampai form ditutup
+          await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => const TransactionFormPage(isStockIn: true),
             ),
           );
+          
+          // Setelah form ditutup, paksa refresh data
+          if (context.mounted) {
+            await provider.loadAll();
+          }
         },
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
@@ -131,7 +151,7 @@ class StockInListPage extends StatelessWidget {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await provider.deleteStockIn(id); // <-- Eksekusi hapus ke database
+              await provider.deleteStockIn(id);
               
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -155,6 +175,7 @@ Widget _buildTransactionCard({
   required bool isStockIn,
   required DateTime date,
   required String title,
+  String? subtitle,
   required int itemCount,
   required int totalQty,
   required double total,
@@ -202,6 +223,15 @@ Widget _buildTransactionCard({
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                         overflow: TextOverflow.ellipsis,
                       ),
+                      if (subtitle != null && subtitle.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                       const SizedBox(height: 2),
                       Text(
                         CurrencyFormatter.formatTanggal(date),

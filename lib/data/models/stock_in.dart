@@ -6,6 +6,7 @@ class StockIn {
   final String? vendorName;
   final List<StockInItem> items;
   final String? proofImagePath;
+  final int initialStock;
 
   StockIn({
     required this.id,
@@ -14,6 +15,7 @@ class StockIn {
     this.vendorName,
     required this.items,
     this.proofImagePath,
+    this.initialStock = 0,
   });
 
   double get total => items.fold(0, (sum, item) => sum + item.subtotal);

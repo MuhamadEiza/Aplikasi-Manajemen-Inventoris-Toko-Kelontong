@@ -6,10 +6,26 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../providers/stock_provider.dart';
 import 'transaction_form_page.dart';
 import 'transaction_detail_page.dart';
+import '../../../providers/product_provider.dart';
 
-/// Halaman Khusus Barang Keluar
-class StockOutListPage extends StatelessWidget {
+// 1. UBAH MENJADI STATEFUL WIDGET
+class StockOutListPage extends StatefulWidget {
   const StockOutListPage({super.key});
+
+  @override
+  State<StockOutListPage> createState() => _StockOutListPageState();
+}
+
+class _StockOutListPageState extends State<StockOutListPage> {
+  
+  // 2. TAMBAHKAN INITSTATE DI SINI
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<StockProvider>().loadAll();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +55,8 @@ class StockOutListPage extends StatelessWidget {
                         isStockIn: false,
                         date: so.date,
                         title: 'Penjualan',
+                        // Menampilkan nama item
+                        subtitle: so.items.map((e) => e.productName).join(', '),
                         itemCount: so.totalProducts,
                         totalQty: so.totalQuantity,
                         total: so.total,
@@ -52,9 +70,6 @@ class StockOutListPage extends StatelessWidget {
                             ),
                           );
                         },
-                        // ==========================================
-                        // TAMBAHAN EDIT & HAPUS UNTUK BARANG KELUAR
-                        // ==========================================
                         onDelete: () {
                           _showDeleteDialog(context, provider, so.id);
                         },
@@ -63,19 +78,24 @@ class StockOutListPage extends StatelessWidget {
                   ),
                 ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => const TransactionFormPage(isStockIn: false),
             ),
           );
+          
+          if (context.mounted) {
+            await provider.loadAll();
+            await context.read<ProductProvider>().loadProducts(); 
+          }
         },
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('Barang Keluar'),
-      ),
+      ),    
     );
   }
 
@@ -111,9 +131,6 @@ class StockOutListPage extends StatelessWidget {
     );
   }
 
-  // ==========================================
-  // FUNGSI DIALOG HAPUS
-  // ==========================================
   void _showDeleteDialog(BuildContext context, StockProvider provider, String id) {
     showDialog(
       context: context,
@@ -128,7 +145,6 @@ class StockOutListPage extends StatelessWidget {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              // HAPUS TANDA // DI BAWAH INI
               await provider.deleteStockOut(id); 
               
               if (context.mounted) {
@@ -153,6 +169,7 @@ Widget _buildTransactionCard({
   required bool isStockIn,
   required DateTime date,
   required String title,
+  String? subtitle,
   required int itemCount,
   required int totalQty,
   required double total,
@@ -200,6 +217,16 @@ Widget _buildTransactionCard({
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                         overflow: TextOverflow.ellipsis,
                       ),
+                      // ============ TAMPILAN NAMA ITEM ============
+                      if (subtitle != null && subtitle.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                       const SizedBox(height: 2),
                       Text(
                         CurrencyFormatter.formatTanggal(date),
@@ -208,9 +235,6 @@ Widget _buildTransactionCard({
                     ],
                   ),
                 ),
-                // ==========================================
-                // TAMPILAN TOMBOL EDIT & HAPUS
-                // ==========================================
                 if (onEdit != null || onDelete != null)
                   Row(
                     mainAxisSize: MainAxisSize.min,

@@ -40,6 +40,10 @@ dependencies:
   cupertino_icons: ^1.0.8
   supabase_flutter: ^2.18.3
   uuid: ^4.6.0
+  mobile_scanner: ^7.5.0
+  pdf: ^3.13.1
+  printing: ^5.15.1
+  universal_html: ^2.3.0
 
 dev_dependencies:
   flutter_test:

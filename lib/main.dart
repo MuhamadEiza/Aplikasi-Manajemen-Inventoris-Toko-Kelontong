@@ -9,7 +9,7 @@ import 'data/repositories/supabase_product_repository.dart';
 import 'data/repositories/supabase_vendor_repository.dart';
 
 import 'data/repositories/supabase_stock_repository.dart';
-import 'data/dummy/dummy_opname_repository.dart';
+import 'data/repositories/supabase_opname_repository.dart';
 
 // Providers
 import 'providers/auth_provider.dart';
@@ -72,7 +72,7 @@ class WarungStockApp extends StatelessWidget {
 
         // Opname — inject DummyOpnameRepository
         ChangeNotifierProvider(
-          create: (_) => OpnameProvider(DummyOpnameRepository())..loadAll(),
+          create: (_) => OpnameProvider(SupabaseOpnameRepository())..loadAll(),
         ),
       ],
       child: MaterialApp(

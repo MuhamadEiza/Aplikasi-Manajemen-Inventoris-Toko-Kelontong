@@ -8,9 +8,10 @@ class Product {
   final double purchasePrice;
   final double sellingPrice;
   final int currentStock;
+  final int initialStock;
   final int minimumStock;
-  final String? barcode;   // ← BARU: kode barcode
-  final String? location;  // ← lokasi penyimpanan (opsional)
+  final String? barcode; // ← BARU: kode barcode
+  final String? location; // ← lokasi penyimpanan (opsional)
 
   Product({
     required this.id,
@@ -20,6 +21,7 @@ class Product {
     required this.purchasePrice,
     required this.sellingPrice,
     required this.currentStock,
+    this.initialStock = 0,
     required this.minimumStock,
     this.barcode,
     this.location,
