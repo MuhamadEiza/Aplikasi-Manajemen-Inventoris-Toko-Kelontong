@@ -8,13 +8,11 @@ class SupabaseProductRepository implements ProductRepository {
   @override
   Future<List<Product>> getAllProducts() async {
     try {
-      // Mengambil semua data dari tabel 'products'
       final response = await _supabase
           .from('products')
           .select()
           .order('name', ascending: true);
 
-      // Jika response kosong, return list kosong
       if (response == null) return [];
 
       return (response as List).map((data) {
@@ -31,7 +29,6 @@ class SupabaseProductRepository implements ProductRepository {
         );
       }).toList();
     } catch (e) {
-      // Jika terjadi error (misal RLS memblokir), print error ke console
       print('ERROR GET PRODUCTS: $e');
       return [];
     }
@@ -61,34 +58,50 @@ class SupabaseProductRepository implements ProductRepository {
 
   @override
   Future<void> addProduct(Product product) async {
-    await _supabase.from('products').insert({
-      'id': product.id,
-      'name': product.name,
-      'category': product.category,
-      'unit': product.unit,
-      'purchase_price': product.purchasePrice,
-      'selling_price': product.sellingPrice,
-      'current_stock': product.currentStock,
-      'minimum_stock': product.minimumStock,
-      'barcode': product.barcode,
-    });
+    try {
+      await _supabase.from('products').insert({
+        'id': product.id,
+        'name': product.name,
+        'category': product.category,
+        'unit': product.unit,
+        'purchase_price': product.purchasePrice,
+        'selling_price': product.sellingPrice,
+        'current_stock': product.currentStock,
+        'minimum_stock': product.minimumStock,
+        'barcode': product.barcode,
+      });
+    } catch (e) {
+      print('ERROR ADD PRODUCT: $e');
+      rethrow; // Lempar error ke UI
+    }
   }
 
   @override
   Future<void> updateProduct(Product product) async {
-    await _supabase.from('products').update({
-      'name': product.name,
-      'category': product.category,
-      'purchase_price': product.purchasePrice,
-      'selling_price': product.sellingPrice,
-      'current_stock': product.currentStock,
-      'minimum_stock': product.minimumStock,
-      'barcode': product.barcode,
-    }).eq('id', product.id);
+    try {
+      await _supabase.from('products').update({
+        'name': product.name,
+        'category': product.category,
+        'unit': product.unit, // <-- SUDAH DITAMBAHKAN
+        'purchase_price': product.purchasePrice,
+        'selling_price': product.sellingPrice,
+        'current_stock': product.currentStock,
+        'minimum_stock': product.minimumStock,
+        'barcode': product.barcode,
+      }).eq('id', product.id);
+    } catch (e) {
+      print('ERROR UPDATE PRODUCT: $e');
+      rethrow; // Lempar error ke UI
+    }
   }
 
   @override
   Future<void> deleteProduct(String id) async {
-    await _supabase.from('products').delete().eq('id', id);
+    try {
+      await _supabase.from('products').delete().eq('id', id);
+    } catch (e) {
+      print('ERROR DELETE PRODUCT: $e');
+      rethrow;
+    }
   }
 }

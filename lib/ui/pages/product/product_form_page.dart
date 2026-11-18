@@ -29,6 +29,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
   String _selectedCategory = 'Makanan Instan';
   String _selectedUnit = 'pcs';
+  
+  // 1. TAMBAHKAN VARIABEL LOADING
+  bool _isLoading = false; 
 
   final List<String> _categories = [
     'Makanan Instan',
@@ -88,24 +91,19 @@ class _ProductFormPageState extends State<ProductFormPage> {
     return jual - beli;
   }
 
-  /// Generate barcode dummy berdasarkan timestamp
   void _generateBarcode() {
     final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-    // Ambil 13 digit terakhir
     final barcode = timestamp.substring(timestamp.length - 13);
     setState(() {
       _barcodeController.text = barcode;
     });
   }
 
-  /// Placeholder scan barcode (aktif di UAS)
   void _scanBarcode() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: const Row(
           children: [
             Icon(Icons.qr_code_scanner, color: AppColors.primary),
@@ -113,30 +111,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
             Text('Scan Barcode'),
           ],
         ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Fitur scan kamera akan aktif setelah UAS.',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Untuk saat ini, silakan:',
-              style: TextStyle(fontSize: 12),
-            ),
-            SizedBox(height: 4),
-            Text(
-              '• Ketik barcode manual di field',
-              style: TextStyle(fontSize: 12),
-            ),
-            Text(
-              '• Atau klik "Generate" untuk barcode otomatis',
-              style: TextStyle(fontSize: 12),
-            ),
-          ],
-        ),
+        content: const Text('Fitur kamera akan aktif di versi selanjutnya.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -147,9 +122,11 @@ class _ProductFormPageState extends State<ProductFormPage> {
     );
   }
 
+  // ==================== FUNGSI SIMPAN (DIPERBAIKI) ====================
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
+    setState(() => _isLoading = true); // Mulai loading
     final provider = context.read<ProductProvider>();
 
     final product = Product(
@@ -168,24 +145,36 @@ class _ProductFormPageState extends State<ProductFormPage> {
       minimumStock: int.parse(_minStockController.text),
     );
 
-    if (_isEdit) {
-      await provider.updateProduct(product);
-    } else {
-      await provider.addProduct(product);
-    }
+    try {
+      // 2. BUNGKUS DENGAN TRY-CATCH
+      if (_isEdit) {
+        await provider.updateProduct(product);
+      } else {
+        await provider.addProduct(product);
+      }
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _isEdit
-                ? 'Produk berhasil diubah'
-                : 'Produk berhasil ditambahkan',
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_isEdit ? 'Produk berhasil diubah' : 'Produk berhasil ditambahkan'),
+            backgroundColor: AppColors.safe,
           ),
-          backgroundColor: AppColors.safe,
-        ),
-      );
-      Navigator.pop(context);
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      // 3. TAMPILKAN ERROR JIKA GAGAL
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menyimpan: $e'),
+            backgroundColor: AppColors.out,
+            duration: const Duration(seconds: 5), // Tampil lebih lama agar bisa dibaca
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false); // Hentikan loading
     }
   }
 
@@ -216,8 +205,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.inventory_2),
                 ),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Nama wajib diisi' : null,
+                validator: (v) => v == null || v.isEmpty ? 'Nama wajib diisi' : null,
               ),
               const SizedBox(height: 12),
 
@@ -228,9 +216,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.category),
                 ),
-                items: _categories
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                    .toList(),
+                items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                 onChanged: (v) => setState(() => _selectedCategory = v!),
               ),
               const SizedBox(height: 12),
@@ -242,9 +228,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.straighten),
                 ),
-                items: _units
-                    .map((u) => DropdownMenuItem(value: u, child: Text(u)))
-                    .toList(),
+                items: _units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
                 onChanged: (v) => setState(() => _selectedUnit = v!),
               ),
               const SizedBox(height: 12),
@@ -259,16 +243,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
               ),
               const SizedBox(height: 20),
 
-              // ============ BARCODE SECTION (BARU) ============
+              // ============ BARCODE SECTION ============
               _sectionTitle('Barcode Produk'),
-              const SizedBox(height: 4),
-              const Text(
-                'Kode barcode untuk scan cepat',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
-              ),
               const SizedBox(height: 10),
 
               TextFormField(
@@ -282,35 +258,23 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   prefixIcon: const Icon(Icons.qr_code),
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.qr_code_scanner),
-                    tooltip: 'Scan (UAS)',
                     onPressed: _scanBarcode,
                   ),
                 ),
               ),
               const SizedBox(height: 8),
 
-              // Tombol Generate
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _generateBarcode,
-                      icon: const Icon(Icons.autorenew, size: 18),
-                      label: const Text(
-                        'Generate Otomatis',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.primary),
-                        foregroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                ],
+              OutlinedButton.icon(
+                onPressed: _generateBarcode,
+                icon: const Icon(Icons.autorenew, size: 18),
+                label: const Text('Generate Otomatis', style: TextStyle(fontSize: 12)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.primary),
+                  foregroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
               ),
 
-              // Preview barcode
               if (_barcodeController.text.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Container(
@@ -318,19 +282,11 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: AppColors.divider.withValues(alpha: 0.3),
-                    ),
+                    border: Border.all(color: AppColors.divider.withValues(alpha: 0.3)),
                   ),
                   child: Column(
                     children: [
-                      const Text(
-                        'Preview Barcode',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
+                      const Text('Preview Barcode', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                       const SizedBox(height: 8),
                       BarcodeWidget(
                         barcode: Barcode.code128(),
@@ -360,8 +316,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.shopping_cart),
                 ),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Harga beli wajib diisi' : null,
+                validator: (v) => v == null || v.isEmpty ? 'Harga beli wajib diisi' : null,
               ),
               const SizedBox(height: 12),
 
@@ -376,8 +331,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 ),
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Harga jual wajib diisi';
-                  final beli =
-                      double.tryParse(_purchasePriceController.text) ?? 0;
+                  final beli = double.tryParse(_purchasePriceController.text) ?? 0;
                   final jual = double.tryParse(v) ?? 0;
                   if (jual < beli) return 'Harga jual < harga beli';
                   return null;
@@ -385,33 +339,20 @@ class _ProductFormPageState extends State<ProductFormPage> {
               ),
               const SizedBox(height: 12),
 
-              // Margin preview
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppColors.safe.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: AppColors.safe.withValues(alpha: 0.3),
-                  ),
+                  border: Border.all(color: AppColors.safe.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Margin',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.safe,
-                      ),
-                    ),
+                    const Text('Margin', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.safe)),
                     Text(
-                      '${CurrencyFormatter.formatRupiah(_marginRupiah)} '
-                      '(${CurrencyFormatter.formatPersen(_marginPercent)})',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.safe,
-                      ),
+                      '${CurrencyFormatter.formatRupiah(_marginRupiah)} (${CurrencyFormatter.formatPersen(_marginPercent)})',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.safe),
                     ),
                   ],
                 ),
@@ -430,8 +371,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.numbers),
                 ),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Stok wajib diisi' : null,
+                validator: (v) => v == null || v.isEmpty ? 'Stok wajib diisi' : null,
               ),
               const SizedBox(height: 12),
 
@@ -443,28 +383,28 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.warning_amber),
                 ),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Stok minimum wajib diisi' : null,
+                validator: (v) => v == null || v.isEmpty ? 'Stok minimum wajib diisi' : null,
               ),
               const SizedBox(height: 24),
 
               // ============ TOMBOL SIMPAN ============
               ElevatedButton(
-                onPressed: _save,
+                onPressed: _isLoading ? null : _save, // Tombol mati saat loading
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                child: Text(
-                  _isEdit ? 'SIMPAN PERUBAHAN' : 'SIMPAN PRODUK',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : Text(
+                        _isEdit ? 'SIMPAN PERUBAHAN' : 'SIMPAN PRODUK',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
               ),
               const SizedBox(height: 16),
             ],
@@ -477,11 +417,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
   Widget _sectionTitle(String title) {
     return Text(
       title,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: AppColors.textPrimary,
-      ),
+      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
     );
   }
 }

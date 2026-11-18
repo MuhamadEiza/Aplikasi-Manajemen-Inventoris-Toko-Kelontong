@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart'; // Pastikan intl sudah ada di pubspec.yaml
 
 import '../../../core/constants/app_colors.dart';
 import '../../../providers/product_provider.dart';
+import 'product_detail_page.dart'; // <-- Import halaman detail yang akan kita buat di Langkah 2
 
 /// Halaman Kartu Stok — dengan fitur Search & Filter Kategori
 class StockCardPage extends StatefulWidget {
@@ -16,19 +18,9 @@ class _StockCardPageState extends State<StockCardPage> {
   final _searchController = TextEditingController();
   String _selectedCategory = 'Semua';
 
-  // Daftar kategori untuk filter (sesuai dengan form input)
   final List<String> _categories = [
-    'Semua',
-    'Makanan Instan',
-    'Minuman',
-    'Snack',
-    'Sembako',
-    'Bumbu Dapur',
-    'Perawatan Tubuh',
-    'Kebersihan',
-    'Rokok',
-    'Alat Tulis',
-    'Lainnya',
+    'Semua', 'Makanan Instan', 'Minuman', 'Snack', 'Sembako', 
+    'Bumbu Dapur', 'Perawatan Tubuh', 'Kebersihan', 'Rokok', 'Alat Tulis', 'Lainnya',
   ];
 
   @override
@@ -42,23 +34,16 @@ class _StockCardPageState extends State<StockCardPage> {
     final productProvider = context.watch<ProductProvider>();
     var products = productProvider.products;
 
-    // ==========================================
-    // LOGIKA FILTER & SEARCH
-    // ==========================================
-    
-    // 1. Filter berdasarkan Kategori
+    // Filter Kategori
     if (_selectedCategory != 'Semua') {
-      products = products
-          .where((p) => p.category == _selectedCategory)
-          .toList();
+      products = products.where((p) => p.category == _selectedCategory).toList();
     }
 
-    // 2. Filter berdasarkan Ketikan Search
+    // Filter Search
     final query = _searchController.text.trim().toLowerCase();
     if (query.isNotEmpty) {
       products = products.where((p) {
         final nameMatch = p.name.toLowerCase().contains(query);
-        // Bisa juga mencari berdasarkan barcode jika ada
         final barcodeMatch = p.barcode?.toLowerCase().contains(query) ?? false;
         return nameMatch || barcodeMatch;
       }).toList();
@@ -79,7 +64,6 @@ class _StockCardPageState extends State<StockCardPage> {
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
-                // Search Bar
                 TextField(
                   controller: _searchController,
                   onChanged: (_) => setState(() {}),
@@ -89,26 +73,15 @@ class _StockCardPageState extends State<StockCardPage> {
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear, size: 20),
-                            onPressed: () {
-                              setState(() {
-                                _searchController.clear();
-                              });
-                            },
+                            onPressed: () => setState(() => _searchController.clear()),
                           )
                         : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   ),
                 ),
                 const SizedBox(height: 10),
-
-                // Filter Kategori (Horizontal Scroll)
                 SizedBox(
                   height: 36,
                   child: ListView.separated(
@@ -140,7 +113,7 @@ class _StockCardPageState extends State<StockCardPage> {
             ),
           ),
 
-          // ============ LIST PRODUK ============
+          // ============ LIST PRODUK (UI BARU) ============
           Expanded(
             child: productProvider.isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -152,69 +125,116 @@ class _StockCardPageState extends State<StockCardPage> {
                         itemBuilder: (context, i) {
                           final p = products[i];
                           
-                          // Warna status stok
                           Color statusColor = p.stockStatus == 'SAFE' 
                               ? AppColors.safe 
                               : p.stockStatus == 'LOW' 
                                   ? AppColors.low 
                                   : AppColors.out;
 
+                          // Simulasi tanggal (Nanti bisa diganti p.updatedAt)
+                          final DateTime lastUpdated = DateTime.now(); 
+
                           return Card(
                             elevation: 0,
-                            margin: const EdgeInsets.only(bottom: 10),
+                            margin: const EdgeInsets.only(bottom: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                               side: BorderSide(color: AppColors.divider.withValues(alpha: 0.3)),
                             ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.all(12),
-                              leading: CircleAvatar(
-                                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                                child: Text(
-                                  p.name[0].toUpperCase(),
-                                  style: const TextStyle(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.bold,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () {
+                                // Navigasi ke halaman detail
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ProductDetailPage(product: p),
                                   ),
-                                ),
-                              ),
-                              title: Text(
-                                p.name,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 4),
-                                  // Tampilkan Kategori
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.background,
-                                      borderRadius: BorderRadius.circular(4),
+                                );
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  children: [
+                                    // --- BARIS ATAS ---
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        CircleAvatar(
+                                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                          child: Text(
+                                            p.name[0].toUpperCase(),
+                                            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                p.name,
+                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.background,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  p.category,
+                                                  style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text('Stok: ${p.currentStock} ${p.unit}', style: const TextStyle(fontSize: 13)),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: statusColor.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: statusColor),
+                                          ),
+                                          child: Text(
+                                            p.currentStock == 0 ? 'HABIS' : '${p.currentStock}',
+                                            style: TextStyle(fontWeight: FontWeight.bold, color: statusColor),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    child: Text(
-                                      p.category,
-                                      style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                                    
+                                    const SizedBox(height: 12),
+                                    const Divider(height: 1),
+                                    const SizedBox(height: 8),
+                                    
+                                    // --- BARIS BAWAH (WAKTU & RINCIAN) ---
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Update: ${DateFormat('dd MMM yyyy, HH:mm').format(lastUpdated)}',
+                                              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                            ),
+                                          ],
+                                        ),
+                                        const Row(
+                                          children: [
+                                            Text('Lihat Rincian', style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                                            Icon(Icons.chevron_right, size: 16, color: AppColors.primary),
+                                          ],
+                                        )
+                                      ],
                                     ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text('Stok: ${p.currentStock} ${p.unit}'),
-                                ],
-                              ),
-                              trailing: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: statusColor),
-                                ),
-                                child: Text(
-                                  p.currentStock == 0 ? 'HABIS' : '${p.currentStock}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: statusColor,
-                                  ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -245,11 +265,7 @@ class _StockCardPageState extends State<StockCardPage> {
             const SizedBox(height: 16),
             const Text(
               'Produk tidak ditemukan',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
             ),
             const SizedBox(height: 8),
             const Text(
